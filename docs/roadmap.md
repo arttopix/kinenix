@@ -20,7 +20,8 @@ Toward 1.0.0, a `flow.md` written for 1.0 keeps running on every 1.x version.
 | 0.4.0b1: Web actions | Modern web pages without multi-step workarounds | 2026-10-23 | Planned |
 | 0.5.0b1: Proven on business flows | Real business examples, run by CI with a real browser and for days on real machines | 2026-10-28 | Planned |
 | 1.0.0: Stable core | A core that can be trusted, with a written stability promise | 2026-11-03 | Planned |
-| 1.1.0: Developer tools | See and check flows in the editor | After 1.0.0 | Planned |
+| 1.1.0: Agent interface | AI agents, small local ones first, can use Kinenix: ask about runs, start runs, and read the results | After 1.0.0 | Planned |
+| 1.2.0: Developer tools | See and check flows in the editor | After 1.1.0 | Planned |
 
 ### 0.2.0b3: Silent bugs and docs
 
@@ -76,6 +77,7 @@ Automated:
 - [ ] `web.get_list` reads repeated elements into rows, with `fields`, `add_columns`, `numeric_fields`, `required_fields`, and `min_rows`
 - [ ] `web.get_table` and `web.get_list` read every page of a paged list or table: `next_selector` is clicked until it is disabled or gone, `max_pages` limits the pages, and the rows of all pages are returned in order
 - [ ] Each action has tests against local HTML pages (no internet), declares `accepted_parameters`, and passes `kinenix validate`
+- [ ] Agent-interface foundation ([design/agent-interface.md](design/agent-interface.md), section 10): every action declares its side-effect kind (`email`, `files`, `web`, `network`, `none`), the existing ones included; new commands keep their logic in functions that return data, and `cli.py` only parses and prints
 - [ ] All four test suites pass, and CI is green
 
 Field test:
@@ -131,7 +133,9 @@ Release:
 **Exit criteria**
 
 Before the release candidate:
-- [ ] `docs/compatibility.md`: what stays stable for all of 1.x (`flow.md` syntax, action names and parameters, CLI commands, Hub API and views, settings files) and what may still change (Studio, ask router)
+- [ ] `docs/compatibility.md`: what stays stable for all of 1.x (`flow.md` syntax, action names and parameters, CLI commands, exit codes, `--json` output and its JSON Schemas once they exist, Hub API and views, settings files) and what may still change (text meant for people, Studio, ask router)
+- [ ] Exit codes with a meaning ([design/agent-interface.md](design/agent-interface.md), section 4) for `kinenix run`, `validate`, `connect`, and `kinenix hub ...`: technical failure, wrong use, business rule, invalid flow, newer Kinenix needed, Hub unreachable, not found
+- [ ] `kinenix run` prints `Run <run_id>` as its first line, and every command that takes a run accepts its `run_id`
 - [ ] Deprecations announced for 2.0, with a warning when used: the `orchestrator` names and `ORCHESTRATOR_*` variables, `on_error: retry`, `fallback_step_id`, `kinenix export-md`
 - [ ] Threat model of kinenix-core, kinenix-worker, and kinenix-hub (flows from others running code, secrets in logs and on the Hub, access to the Hub on the LAN without HTTPS, `hub query` changing data, file paths leaving their folder, dashboard XSS), and a code and security review against it, with every finding fixed or moved to a milestone
 - [ ] Security checks in CI on every pull request: `pip-audit` (no dependency with a known vulnerability) and `bandit` (every finding fixed or explained in the code)
@@ -150,7 +154,7 @@ Release:
 
 **Compatibility:** no breaking change from 0.5.0b1. Deprecated names keep working, with a warning, until 2.0.
 
-**Out of scope (after 1.0.0):** developer tools (1.1.0); a Hub service installer and a Docker image; `kinenix connect --name` and finding the Hub on the LAN automatically; the MCP server over Hub data; `kinenix record`; WebSocket job dispatch; PostgreSQL; Studio (paused).
+**Out of scope (after 1.0.0):** the agent interface, MCP server, and job dispatch (1.1.0); developer tools (1.2.0); a Hub service installer and a Docker image; `kinenix connect --name` and finding the Hub on the LAN automatically; `kinenix record`; PostgreSQL; Studio (paused).
 
 ### Later: measured limits
 
@@ -161,7 +165,36 @@ Noted on 2026-10-16 and not scheduled yet; correctness comes first (0.3.0b1 to 0
 - Hub load: many workers sending runs at once, a large `hub.db`, and the time `query` and `report` take
 - macOS in CI
 
-### 1.1.0: Developer tools
+### 1.1.0: Agent interface
+
+**Goal:** an AI agent, a small model running locally first, can use Kinenix the way a careful person does: find out what it can do, ask about runs ("did hello fail at 11 pm?"), start a run on a worker ("run hello on the Raspberry Pi") after a person confirms, and read and explain the result. Kinenix keeps working without any agent. Design: [design/agent-interface.md](design/agent-interface.md).
+
+The setup this milestone is tested on: the Ubuntu machine runs the Hub, a local model (Ollama), and the agent; the Raspberry Pi stays a worker without AI.
+
+**Scope:** the tools with a contract (design sections 3 to 9), the MCP server, `kinenix ask` (finishing [ask_router.md](ask_router.md)), and job dispatch from the Hub to a worker.
+
+**Exit criteria**
+
+Automated:
+- [ ] `--json` with the shared envelope on every command; JSON Schemas in `schemas/` for Run, Step, Failure, Issue, and Flow; contract tests in CI check every `--json` answer against them
+- [ ] `kinenix capabilities`, `kinenix describe FLOW` (inputs and side effects), `kinenix runs status RUN_ID`, `--var`, `--dry-run`, `--detach`, and `--yes`; stable error codes with `retryable`
+- [ ] Job dispatch: the Hub sends a run to a chosen worker, the worker runs it and reports as today, and a person confirms every run started this way
+- [ ] MCP server with a short list of tools (read-only ones free, runs only after confirmation), using the same functions as the CLI
+- [ ] `kinenix ask` answers questions about runs and workers in Thai and English with a local model, every number from the Hub database
+- [ ] An evaluation set of agent tasks (ask, run, explain a failure) with a success rate measured for at least one small local model and one cloud model
+
+Field test:
+- [ ] On the Ubuntu machine, a local model answers "did this flow fail last night, and where?" correctly from the Hub, and starts a flow on the Raspberry Pi worker after confirmation
+
+Docs and release:
+- [ ] An agent guide shipped in the package (`kinenix agent-guide`), usable as an OpenClaw or Claude skill
+- [ ] CHANGELOG entry; TestPyPI checked; tag `v1.1.0`; PyPI checked
+
+**Compatibility:** additions only; nothing promised in 1.0.0 changes.
+
+**Out of scope:** agents changing flows and running them without a person seeing the change; general conversation inside Kinenix beyond `kinenix ask`; sending flow data to a cloud model from Kinenix itself.
+
+### 1.2.0: Developer tools
 
 **Goal:** see and check flows in the editor: a flow diagram from `flow.md`, then a VS Code extension with problems, completion, and a live diagram. `flow.md` stays the source; diagrams are read-only views.
 
