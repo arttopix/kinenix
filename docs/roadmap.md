@@ -6,20 +6,199 @@ Legend: `[x]` done, `[~]` partially done, `[ ]` not started.
 
 ---
 
-## 0. Release 1.0.0 (target 2026-10-27)
+## 0. Releases
 
-1.0.0 makes the core dependable: a `flow.md` written for 1.0 keeps running on every 1.x version. The GitHub milestones (not the phase numbers below) track the work.
+Each GitHub milestone is one release and has the same title as its heading here. A milestone lists its issues; this section holds its goal, exit criteria, compatibility notes, and what is out of scope. Each open milestone also has a release checklist issue (label `release`) whose boxes are the exit criteria; the milestone closes when the checklist is done and the version is on PyPI.
 
-| Milestone | Content | Target | Status |
+Toward 1.0.0, a `flow.md` written for 1.0 keeps running on every 1.x version.
+
+| Milestone | Goal | Due | Status |
 | :--- | :--- | :--- | :--- |
-| Phase 2: Subflows and error handling | On Error and Finally, `${error}`, retries, subflow context, run records, Hub queries; release 0.2.0b4 | 2026-10-17 | Code done; releasing |
-| Phase 3: Expressions | Safe functions and arithmetic in `${...}` (#56), without `eval` | 2026-10-20 | Not started |
-| Phase 4: Web actions | `web.goto` (#58), `web.choose` (#57), `web.get_list` (#55) | 2026-10-23 | Not started |
-| 1.0.0rc1 | What 1.0 keeps stable (flow.md syntax, action names and parameters, CLI commands, Hub API and views), deprecations announced for 2.0, code and security review | 2026-10-24 | Not started |
-| Field test | rc1 on the Raspberry Pi worker, the Ubuntu Hub, and Windows with a real flow; bug fixes only | 2026-10-26 | Not started |
-| 1.0.0 | Release | 2026-10-27 | Not started |
+| 0.2.0b3: Silent bugs and docs | No silent wrong results; documentation examples that work | 2026-10-10 | Released |
+| 0.2.0b4: Subflows, error handling, and run records | Failures handled in one place and recorded as facts the Hub can answer questions from | 2026-10-16 | Released |
+| 0.3.0b1: Expressions | Count, join, clean, and calculate values in `${...}`, safely | 2026-10-20 | Next |
+| 0.4.0b1: Web actions | Modern web pages without multi-step workarounds | 2026-10-23 | Planned |
+| 0.5.0b1: Proven on business flows | Real business examples, run by CI with a real browser and for days on real machines | 2026-10-28 | Planned |
+| 1.0.0: Stable core | A core that can be trusted, with a written stability promise | 2026-11-03 | Planned |
+| 1.1.0: Agent interface | AI agents, small local ones first, can use Kinenix: ask about runs, start runs, and read the results | After 1.0.0 | Planned |
+| 1.2.0: Developer tools | See and check flows in the editor | After 1.1.0 | Planned |
 
-Phase 5 (developer tools: `kinenix graph`, VS Code extension) comes after 1.0.0.
+### 0.2.0b3: Silent bugs and docs
+
+**Goal:** a flow never does the wrong thing without a warning, and the documentation examples work as written. Released 2026-10-10.
+
+**Scope:** #46, #47, #48, #53, #59, #61, #63 and the other issues of the milestone.
+
+### 0.2.0b4: Subflows, error handling, and run records
+
+**Goal:** a flow handles failures in one place (`## On Error`, `## Finally`), every run is recorded with complete failure facts, and the Hub answers "what failed, and where?". Released 2026-10-16. Design: [design/phase-2.md](design/phase-2.md). Changes: [CHANGELOG.md](../CHANGELOG.md).
+
+**Scope:** #49, #50, #51, #52, #54, #60, #62.
+
+### 0.3.0b1: Expressions
+
+**Goal:** a flow can count, join, clean, and calculate values in `${...}` without workarounds, and nothing written in a flow can run code.
+
+**Scope:** #56.
+
+**Exit criteria**
+
+Automated:
+- [ ] Functions `len`, `join`, `number`, `trim`, `lower`, `upper`, `replace`, `default`, `round`, `part`, `substring`; `+ - * / %` on numbers; indexing `rows[0]` and `row['name']`; each with tests, including bad input (design: docs/design/expressions.md)
+- [ ] Conditions combine comparisons with `and`, `or`, and `not`, and a value such as `Johnson and Johnson` is not split
+- [ ] `kinenix validate` reports expression syntax errors and unknown functions with their line
+- [ ] Unknown functions, attribute access such as `__class__`, and anything outside the list are refused with a clear message (security tests)
+- [ ] Fuzz test: thousands of random and malformed expressions never crash the parser, never hang, and never run code
+- [ ] Every existing example and test flow compiles and runs unchanged
+- [ ] All four test suites pass, and CI is green
+
+Field test:
+- [x] A demo flow with `len`, `join`, `number`, `part`, and `and` runs on the Raspberry Pi worker; the real insurance-quote flow is tested in 0.4.0b1 together with the new web actions
+
+Docs and release:
+- [ ] `docs/flow_markdown_spec.md` documents every function with an example
+- [ ] CHANGELOG entry; TestPyPI checked; tag `v0.3.0b1`; PyPI checked
+
+**Compatibility:** `${a.b}` and existing conditions behave as before. Text inside `${...}` that looks like a function call, such as `${len(x)}`, is now evaluated.
+
+**Out of scope:** user-defined functions, loops, or lambdas in `${...}` (never, for safety); date arithmetic (stays in `date.calc`); regular expressions (1.1.0 if a real flow needs them).
+
+### 0.4.0b1: Web actions
+
+**Goal:** a flow works with modern web pages (cards instead of tables, custom dropdowns, single-page apps) in one step each, instead of multi-step workarounds.
+
+**Scope:** #55 `web.get_list`, #57 `web.choose`, #58 `web.goto`, and reading paged tables and lists.
+
+**Exit criteria**
+
+Automated:
+- [ ] `web.goto` navigates the current tab; a page that a subflow opens or switches to is the parent's page afterwards, so screenshots show the right page
+- [ ] `web.choose` picks an option in a custom dropdown (with and without a search box) and, when the option is missing, lists the visible options in the error
+- [ ] `web.get_list` reads repeated elements into rows, with `fields`, `add_columns`, `numeric_fields`, `required_fields`, and `min_rows`
+- [ ] `web.get_table` and `web.get_list` read every page of a paged list or table: `next_selector` is clicked until it is disabled or gone, `max_pages` limits the pages, and the rows of all pages are returned in order
+- [ ] Each action has tests against local HTML pages (no internet), declares `accepted_parameters`, and passes `kinenix validate`
+- [ ] Agent-interface foundation ([design/agent-interface.md](design/agent-interface.md), section 10): every action declares its side-effect kind (`email`, `files`, `web`, `network`, `none`), the existing ones included; new commands keep their logic in functions that return data, and `cli.py` only parses and prints
+- [ ] All four test suites pass, and CI is green
+
+Field test:
+- [ ] The real insurance-quote flow uses `web.goto`, `web.choose`, `web.get_list`, and expressions (`len`, `join`, `number` instead of its workarounds) and runs on the Raspberry Pi worker
+
+Docs and release:
+- [ ] `docs/actions_reference.md` documents each action with a `flow.md` example
+- [ ] CHANGELOG entry; TestPyPI checked; tag `v0.4.0b1`; PyPI checked
+
+**Compatibility:** new actions only. `web.open` still opens a new tab. A parent flow now sees the page its subflow left open (before, it kept its own page).
+
+**Out of scope:** multi-select dropdowns (1.1.0); clearing cookies and storage on `web.goto` (`reset: true`), unless the field test needs it.
+
+### 0.5.0b1: Proven on business flows
+
+**Goal:** show and prove that Kinenix does real business work end to end. Each example is a complete project someone can copy and adapt, runs without internet against sample data and local pages, and is run by CI and on real machines for days. These examples are the gate that 1.0.0 must keep passing.
+
+**Scope:** three new example projects, an end-to-end CI job with a real browser, failure-injection tests, and a soak test on the Raspberry Pi worker.
+
+| Example | Business story | Patterns it proves |
+| :--- | :--- | :--- |
+| `invoice_check` | A folder of supplier invoices (Excel) is checked: totals, duplicates, missing PO numbers. Good invoices go to a summary workbook, bad ones to an exceptions list, processed files are moved, and the output is zipped and e-mailed | `file.list` loops with `item_label`, expressions, `flow.fail` per item with `on_error: continue`, On Error and Finally, `file.zip`, `email.send` |
+| `quote_requests` | Requests from a CSV are entered one by one into a quote form (a local copy of a modern insurance site), the offered packages are read, and a results file plus a list of failed requests is e-mailed | subflow per item, `web.goto`, `web.choose`, `web.get_list`, `${error.loop.item}`, screenshots on failure |
+| `daily_sales_report` | A sales table is read from a portal (local pages), compared with targets from Excel, and the differences are reported; it runs on a worker schedule and reports to the Hub | `web.get_table`, expressions, `kinenix-worker schedule`, `kinenix hub report` |
+
+**Exit criteria**
+
+Examples:
+- [ ] Each example has a README (the business story, input, output, how to run, how long it takes), fake sample data only, `> Requires:`, `redact` for personal fields, `## On Error` and `## Finally`, and passes `kinenix validate`
+- [ ] Each ships with the package (`kinenix init --example`) and appears in a new `docs/examples.md` that says which patterns it shows
+
+Automated:
+- [ ] A new CI job installs Chromium and runs every offline example end to end, headless, and checks its outputs (rows written, items failed, files moved); it gates every pull request from now on
+- [ ] Failure-injection tests: the Hub is down or slow during a run (the run completes, the log is kept, one warning); an input file is missing; the browser closes in the middle of a loop (Finally still runs, no browser process is left)
+
+Field test (soak):
+- [ ] The Raspberry Pi worker runs the offline examples every 30 minutes for 48 hours and reports to the Ubuntu Hub: no failure caused by Kinenix, memory does not grow, no browser process is left behind, and `report`, `logs`, and `query` answer correctly
+- [ ] A baseline is written in `docs/examples.md`: time and memory of a 100-item loop on the Raspberry Pi
+
+Release:
+- [ ] CHANGELOG entry; TestPyPI checked; tag `v0.5.0b1`; PyPI checked
+
+**Compatibility:** nothing changes for existing flows; this milestone adds examples and tests. Bugs found by the examples are fixed here.
+
+**Out of scope:** desktop applications and OCR; reading e-mail (IMAP); an AI extraction example (needs a local model on the machine, 1.1.0); examples that depend on real company websites (only local pages and the existing public examples).
+
+### 1.0.0: Stable core
+
+**Goal:** a core that can be trusted: what 1.0 keeps stable is written down, old names that will go are announced, and the release candidate has run on real machines before the final release.
+
+**Scope:** the release checklist issue, and issues found while testing the release candidate.
+
+**Exit criteria**
+
+Before the release candidate:
+- [ ] `docs/compatibility.md`: what stays stable for all of 1.x (`flow.md` syntax, action names and parameters, CLI commands, exit codes, `--json` output and its JSON Schemas once they exist, Hub API and views, settings files) and what may still change (text meant for people, Studio, ask router)
+- [ ] Exit codes with a meaning ([design/agent-interface.md](design/agent-interface.md), section 4) for `kinenix run`, `validate`, `connect`, and `kinenix hub ...`: technical failure, wrong use, business rule, invalid flow, newer Kinenix needed, Hub unreachable, not found
+- [ ] `kinenix run` prints `Run <run_id>` as its first line, and every command that takes a run accepts its `run_id`
+- [ ] Deprecations announced for 2.0, with a warning when used: the `orchestrator` names and `ORCHESTRATOR_*` variables, `on_error: retry`, `fallback_step_id`, `kinenix export-md`
+- [ ] Threat model of kinenix-core, kinenix-worker, and kinenix-hub (flows from others running code, secrets in logs and on the Hub, access to the Hub on the LAN without HTTPS, `hub query` changing data, file paths leaving their folder, dashboard XSS), and a code and security review against it, with every finding fixed or moved to a milestone
+- [ ] Security checks in CI on every pull request: `pip-audit` (no dependency with a known vulnerability) and `bandit` (every finding fixed or explained in the code)
+- [ ] `docs/releasing.md` installs from TestPyPI without its broken copies of other packages
+- [ ] Release `1.0.0rc1`
+
+Check of 1.0.0rc1, one day (the long soak is in 0.5.0b1):
+- [ ] The 0.5.0b1 examples pass in CI and on the Raspberry Pi worker with the release candidate, and `bot_fx_rate` runs on its cron schedule
+- [ ] Ubuntu Hub: every run and failure is recorded, and `report`, `logs`, and `query` answer correctly
+- [ ] Windows: a Hub database from 0.2.0b3 upgrades with no data lost
+- [ ] Only bug fixes after the release candidate
+
+Release:
+- [ ] Version `1.0.0`, package classifier `Development Status :: 5 - Production/Stable`, CHANGELOG with upgrade notes from 0.2.0b4
+- [ ] TestPyPI checked; tag `v1.0.0`; PyPI checked
+
+**Compatibility:** no breaking change from 0.5.0b1. Deprecated names keep working, with a warning, until 2.0.
+
+**Out of scope (after 1.0.0):** the agent interface, MCP server, and job dispatch (1.1.0); developer tools (1.2.0); a Hub service installer and a Docker image; `kinenix connect --name` and finding the Hub on the LAN automatically; `kinenix record`; PostgreSQL; Studio (paused).
+
+### Later: measured limits
+
+Noted on 2026-10-16 and not scheduled yet; correctness comes first (0.3.0b1 to 0.5.0b1), then security (1.0.0).
+
+- Resource use measured on each platform (RAM and CPU of a worker with and without a browser, and of the Hub; startup time; time per step), published as system requirements
+- Several flows running at the same time on one worker: no clash of log files, output files, or settings, and the Hub receives every run
+- Hub load: many workers sending runs at once, a large `hub.db`, and the time `query` and `report` take
+- macOS in CI
+
+### 1.1.0: Agent interface
+
+**Goal:** an AI agent, a small model running locally first, can use Kinenix the way a careful person does: find out what it can do, ask about runs ("did hello fail at 11 pm?"), start a run on a worker ("run hello on the Raspberry Pi") after a person confirms, and read and explain the result. Kinenix keeps working without any agent. Design: [design/agent-interface.md](design/agent-interface.md).
+
+The setup this milestone is tested on: the Ubuntu machine runs the Hub, a local model (Ollama), and the agent; the Raspberry Pi stays a worker without AI.
+
+**Scope:** the tools with a contract (design sections 3 to 9), the MCP server, `kinenix ask` (finishing [ask_router.md](ask_router.md)), and job dispatch from the Hub to a worker.
+
+**Exit criteria**
+
+Automated:
+- [ ] `--json` with the shared envelope on every command; JSON Schemas in `schemas/` for Run, Step, Failure, Issue, and Flow; contract tests in CI check every `--json` answer against them
+- [ ] `kinenix capabilities`, `kinenix describe FLOW` (inputs and side effects), `kinenix runs status RUN_ID`, `--var`, `--dry-run`, `--detach`, and `--yes`; stable error codes with `retryable`
+- [ ] Job dispatch: the Hub sends a run to a chosen worker, the worker runs it and reports as today, and a person confirms every run started this way
+- [ ] MCP server with a short list of tools (read-only ones free, runs only after confirmation), using the same functions as the CLI
+- [ ] `kinenix ask` answers questions about runs and workers in Thai and English with a local model, every number from the Hub database
+- [ ] An evaluation set of agent tasks (ask, run, explain a failure) with a success rate measured for at least one small local model and one cloud model
+
+Field test:
+- [ ] On the Ubuntu machine, a local model answers "did this flow fail last night, and where?" correctly from the Hub, and starts a flow on the Raspberry Pi worker after confirmation
+
+Docs and release:
+- [ ] An agent guide shipped in the package (`kinenix agent-guide`), usable as an OpenClaw or Claude skill
+- [ ] CHANGELOG entry; TestPyPI checked; tag `v1.1.0`; PyPI checked
+
+**Compatibility:** additions only; nothing promised in 1.0.0 changes.
+
+**Out of scope:** agents changing flows and running them without a person seeing the change; general conversation inside Kinenix beyond `kinenix ask`; sending flow data to a cloud model from Kinenix itself.
+
+### 1.2.0: Developer tools
+
+**Goal:** see and check flows in the editor: a flow diagram from `flow.md`, then a VS Code extension with problems, completion, and a live diagram. `flow.md` stays the source; diagrams are read-only views.
+
+**Scope:** #68, #69, #70. Candidates from 1.0.0's out-of-scope list are decided when this milestone starts.
 
 ## 1. Next Priorities
 
@@ -85,9 +264,9 @@ Hub -> versioned job bundle -> Worker (WebSocket) -> kinenix-core executes flow
 
 ---
 
-## 2. Phases
+## 2. Status by Module
 
-### Phase 1: Core Engine (`kinenix-core`) - Done
+### Core Engine (`kinenix-core`) - Done
 - [x] Flow JSON schema and Pydantic v2 models
 - [x] Interpreter, execution context, and `${var}` evaluator (no `eval`)
 - [x] Actions: Web (Playwright), Excel/CSV, file system, HTTP, email, logic, flow control
@@ -107,7 +286,7 @@ Hub -> versioned job bundle -> Worker (WebSocket) -> kinenix-core executes flow
 - [x] Subflows written as `.md` (compiled when called), sharing the bundle's config and folder; `@shared` components keep their own unless `inherit_config: true`; `kinenix validate` follows subflows and checks `inputs` names; the `hello` example calls a subflow
 - [x] `date.calc`: today or a given date, shifted by days, weeks, months, or years and snapped to the start or end of a week, month, or year; `bot_fx_rate` reports the previous month by default instead of fixed dates
 
-### Phase 2: Studio (`kinenix-studio`) - Paused
+### Studio (`kinenix-studio`) - Paused
 
 Paused on 2026-10-08. Flows are written as `flow.md` from a `requirements.md` with an AI assistant (`kinenix init`), so a visual flow editor duplicates that work while adding a React and FastAPI application to maintain. The hardest part of authoring, finding selectors on real pages, moves to a `kinenix record` command built on Playwright's recorder (priority 7 above). The code stays in the repository and in CI, is not published, and receives no new features until this decision is revisited.
 
@@ -120,7 +299,7 @@ Paused on 2026-10-08. Flows are written as `flow.md` from a `requirements.md` wi
 - [ ] AI prompt bar for natural-language flow generation
 - [ ] Tauri desktop shell
 
-### Phase 3: Hub (`kinenix-hub`) - In progress
+### Hub (`kinenix-hub`) - In progress
 - [x] Renamed from Orchestrator to Hub; old command, flags, environment variables, and settings file still work (see [hub.md](hub.md#5-renamed-from-orchestrator))
 - [x] FastAPI service with heartbeat and telemetry ingestion over HTTP
 - [x] Execution and worker storage via SQLAlchemy (SQLite default, `DATABASE_URL` for others)
@@ -142,7 +321,7 @@ Paused on 2026-10-08. Flows are written as `flow.md` from a `requirements.md` wi
 - [ ] Alerts and daily digests (LINE Messaging API first, then Teams and Email)
 - [~] Natural-language questions about jobs and workers with a local model (see [ask_router.md](ask_router.md))
 
-### Phase 4: Worker (`kinenix-worker`) - In progress
+### Worker (`kinenix-worker`) - In progress
 - [x] `kinenix-worker run`, `watch` (file trigger), `schedule` (interval), `daemon` (multi-trigger config)
 - [x] Optional per-job sandbox workspace (`~/.kinenix/workspaces/<job_id>`)
 - [x] Verified on Raspberry Pi 4 (ARM64) with setup script; re-verified on 2026-10-05 after the rename to Hub: heartbeats as a systemd service and the `bot_fx_rate` flow run by a cron trigger, reported to the Hub
@@ -153,7 +332,7 @@ Paused on 2026-10-08. Flows are written as `flow.md` from a `requirements.md` wi
 - [ ] Bundle packaging (`.kinpkg`), download, and local cache
 - [ ] Real-time log and screenshot streaming
 
-### Phase 5: Desktop Automation and Public Release - Not started
+### Desktop Automation and Public Release - Not started
 - [ ] Windows desktop automation (`uiautomation` / UIA)
 - [ ] Credential vault for flow secrets
 - [ ] Docker Compose one-command deployment
@@ -161,7 +340,7 @@ Paused on 2026-10-08. Flows are written as `flow.md` from a `requirements.md` wi
 - [x] `kinenix init "Task name"`: new project for the requirements-to-AI-to-`flow.md` workflow (`requirements.md`, `AGENTS.md` for the assistant, `.env.example`); `kinenix init --example` with packaged examples (`hello`, `bot_fx_rate`, `rpachallenge`); `kinenix actions` lists actions and their parameters
 - [x] User flows live in a flows folder outside the Kinenix repository (default `~/kinenix-flows`, asked on the first `kinenix init`, optional git repository, `kinenix flows-dir`, `KINENIX_FLOWS_DIR`); `kinenix run NAME` and worker triggers find flows there by name
 
-### Phase 6: Advanced Local Agentic Capabilities - Not started
+### Advanced Local Agentic Capabilities - Not started
 - [ ] Self-healing UI selectors with DOM fallback matching
 - [ ] Studio copilot for natural-language flow generation and error diagnosis
 - [ ] GitOps release pipeline to Hub and workers

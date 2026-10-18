@@ -63,17 +63,18 @@ Released version numbers can never be reused on PyPI or TestPyPI. If something i
    - `kinenix-hub>=` and `kinenix-worker>=` in the extras of `kinenix-core/pyproject.toml`
    - `kinenix>=` in the dependencies of `kinenix-hub/pyproject.toml` and `kinenix-worker/pyproject.toml`
 2. **Merge `dev` into `main`** through the usual release pull request. CI builds the packages, checks their metadata, and installs them in a clean environment.
-3. **Try it on TestPyPI:** in GitHub, open **Actions**, then **Release**, then **Run workflow** on `main`. When it finishes, check in a new virtual environment:
+3. **Try it on TestPyPI:** in GitHub, open **Actions**, then **Release**, then **Run workflow** on `main`. When it finishes, check in a new virtual environment. Download only the three Kinenix packages from TestPyPI and take every other package from PyPI: anyone can upload to TestPyPI, and it holds broken copies of common packages (for example a `FASTAPI 1.0` that pip would pick with `--extra-index-url`).
    ```bash
-   pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ "kinenix[hub,worker]==0.2.0b1"
-   kinenix --version
+   pip download --no-deps -d testpypi --index-url https://test.pypi.org/simple/ kinenix==0.3.0b1 kinenix-hub==0.3.0b1 kinenix-worker==0.3.0b1
+   pip install --find-links testpypi "kinenix[hub,worker]==0.3.0b1"
+   kinenix version
    kinenix-worker --version
    ```
 4. **Publish to PyPI** by tagging `main`:
    ```bash
    git switch main && git pull
-   git tag v0.2.0b1
-   git push origin v0.2.0b1
+   git tag v0.3.0b1
+   git push origin v0.3.0b1
    ```
    The workflow builds again, checks that the tag matches the package version, and publishes all three packages.
 5. Check https://pypi.org/project/kinenix/, `kinenix-hub`, and `kinenix-worker`, then install from PyPI in a clean environment.
@@ -109,3 +110,18 @@ Each release's changes and upgrade notes are in [CHANGELOG.md](../CHANGELOG.md).
 | One shared version; tag equals `v` + version | `.github/scripts/check_release.py` |
 | Siblings require the same version | `kinenix-core/tests/test_repository_rules.py` |
 | `kinenix[hub,worker]` installs from the built files in a clean environment, and `kinenix`, `kinenix hub`, `kinenix-worker`, and the dashboard files work | CI `packages` job |
+
+---
+
+## 5. The website (www.kinenix.com)
+
+The website is a separate repository, [arttopix/kinenix-web](https://github.com/arttopix/kinenix-web): MkDocs, built and hosted by Cloudflare Pages. Every build copies `docs/` from `main` of this repository, so the site shows the documentation of the latest release, not of `dev`.
+
+When a release pull request changes `docs/`, `README.md`, or `CHANGELOG.md` on `main`, the **Website** workflow ([`.github/workflows/website.yml`](../.github/workflows/website.yml)) asks Cloudflare Pages to build the site again. It can also be run by hand from **Actions**, then **Website**, then **Run workflow**.
+
+One-time setup:
+
+1. In the Cloudflare dashboard, open the Pages project of kinenix-web, then **Settings**, then **Builds**, then **Deploy hooks**, and add a hook for its production branch. Copy the URL.
+2. In this repository on GitHub, open **Settings**, then **Secrets and variables**, then **Actions**, and add the secret `CLOUDFLARE_PAGES_DEPLOY_HOOK` with that URL.
+
+Anyone with the hook URL can start a build, so keep it only in the secret. Without the secret, the workflow passes with a warning and the site is not rebuilt.
