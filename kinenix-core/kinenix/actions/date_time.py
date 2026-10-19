@@ -85,6 +85,7 @@ class DateCalcAction(BaseAction):
     """
     accepted_parameters = ('date', 'input_format', 'add_days', 'add_weeks', 'add_months', 'add_years',
                            'snap', 'format')
+    side_effects = ('none',)
 
     def execute(self, parameters: Dict[str, Any], context: ExecutionContext) -> Any:
         value = _parse(parameters.get("date"), parameters.get("input_format"))

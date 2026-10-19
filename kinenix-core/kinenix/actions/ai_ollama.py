@@ -40,6 +40,7 @@ class OllamaPromptAction(BaseAction):
     Supports structured JSON enforcement and image inputs (multimodal).
     """
     accepted_parameters = ('base_url', 'format', 'image_path', 'model', 'prompt', 'system', 'temperature', 'timeout')
+    side_effects = ('network',)
 
     def execute(self, parameters: Dict[str, Any], context: ExecutionContext) -> Any:
         prompt = str(parameters.get("prompt", "")).strip()
@@ -117,6 +118,7 @@ class OllamaExtractAction(BaseAction):
     Extracts structured data entities from text or an image using Ollama.
     """
     accepted_parameters = ('base_url', 'image_path', 'instructions', 'model', 'schema', 'text', 'timeout')
+    side_effects = ('network',)
 
     def execute(self, parameters: Dict[str, Any], context: ExecutionContext) -> Any:
         schema: Optional[Any] = parameters.get("schema")

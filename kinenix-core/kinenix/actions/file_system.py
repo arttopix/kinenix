@@ -33,6 +33,7 @@ def _flag(value: Any, default: bool) -> bool:
 @register_action("file.exists")
 class FileExistsAction(BaseAction):
     accepted_parameters = ('path',)
+    side_effects = ('none',)
 
     def execute(self, parameters: Dict[str, Any], context: ExecutionContext) -> Any:
         path_str = parameters.get("path")
@@ -47,6 +48,7 @@ class FileExistsAction(BaseAction):
 @register_action("file.copy")
 class FileCopyAction(BaseAction):
     accepted_parameters = ('source', 'destination', 'overwrite')
+    side_effects = ('files',)
 
     def execute(self, parameters: Dict[str, Any], context: ExecutionContext) -> Any:
         src_str = parameters.get("source")
@@ -82,6 +84,7 @@ class FileCopyAction(BaseAction):
 @register_action("file.move")
 class FileMoveAction(BaseAction):
     accepted_parameters = ('source', 'destination', 'overwrite')
+    side_effects = ('files',)
 
     def execute(self, parameters: Dict[str, Any], context: ExecutionContext) -> Any:
         src_str = parameters.get("source")
@@ -118,6 +121,7 @@ class FileMoveAction(BaseAction):
 @register_action("file.delete")
 class FileDeleteAction(BaseAction):
     accepted_parameters = ('path', 'missing_ok')
+    side_effects = ('files',)
 
     def execute(self, parameters: Dict[str, Any], context: ExecutionContext) -> Any:
         path_str = parameters.get("path")
@@ -145,6 +149,7 @@ class FileDeleteAction(BaseAction):
 class FileZipAction(BaseAction):
     """Packs files and folders into one zip file, for example to attach a run's output to an email."""
     accepted_parameters = ('source', 'destination', 'overwrite')
+    side_effects = ('files',)
 
     def execute(self, parameters: Dict[str, Any], context: ExecutionContext) -> Any:
         sources = parameters.get("source")
@@ -197,6 +202,7 @@ class FileZipAction(BaseAction):
 class FileUnzipAction(BaseAction):
     """Extracts a zip file into a folder."""
     accepted_parameters = ('source', 'destination', 'overwrite')
+    side_effects = ('files',)
 
     def execute(self, parameters: Dict[str, Any], context: ExecutionContext) -> Any:
         src_str = parameters.get("source")
@@ -237,6 +243,7 @@ class FileUnzipAction(BaseAction):
 @register_action("file.create_folder")
 class FileCreateFolderAction(BaseAction):
     accepted_parameters = ('path',)
+    side_effects = ('files',)
 
     def execute(self, parameters: Dict[str, Any], context: ExecutionContext) -> Any:
         path_str = parameters.get("path")
@@ -261,6 +268,7 @@ class FileListAction(BaseAction):
     or pick the newest one. Each item carries its name, path, size, and modification time.
     """
     accepted_parameters = ('path', 'pattern', 'recursive', 'type', 'sort_by', 'descending', 'limit')
+    side_effects = ('none',)
 
     def execute(self, parameters: Dict[str, Any], context: ExecutionContext) -> Any:
         path_str = parameters.get("path")
@@ -318,6 +326,7 @@ TEXT_FORMATS = ("text", "lines", "json")
 class FileReadTextAction(BaseAction):
     """Reads a text file as one string, as a list of lines, or as parsed JSON."""
     accepted_parameters = ('path', 'encoding', 'format')
+    side_effects = ('none',)
 
     def execute(self, parameters: Dict[str, Any], context: ExecutionContext) -> Any:
         path_str = parameters.get("path")
@@ -357,6 +366,7 @@ class FileWriteTextAction(BaseAction):
     With append, the text is added as a line: a line break follows it if it does not end with one.
     """
     accepted_parameters = ('path', 'content', 'append', 'encoding')
+    side_effects = ('files',)
 
     def execute(self, parameters: Dict[str, Any], context: ExecutionContext) -> Any:
         path_str = parameters.get("path")

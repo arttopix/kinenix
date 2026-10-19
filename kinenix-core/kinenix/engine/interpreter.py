@@ -147,7 +147,26 @@ class FlowInterpreter:
 
         if not self.auto_close_browser:
             return
+        self._close_browser(context)
 
+    _BROWSER_KEYS = ("__playwright_pw__", "__playwright_browser__", "__playwright_page__")
+
+    def _take_browser_back(self, context: ExecutionContext, child_context: ExecutionContext, shared: bool) -> None:
+        """
+        After a subflow (#58). A shared browser comes back as the subflow left it: the page it went to or
+        switched to (so screenshots and later steps see the right page), a browser it opened (so the run
+        closes it at the end), or nothing when it closed the browser. A subflow that does not share the
+        browser closes any browser it opened itself, so no browser process is left behind.
+        """
+        if shared:
+            for key in self._BROWSER_KEYS:
+                context.set_variable(key, child_context.get_variable(key))
+        elif self.auto_close_browser:
+            borrowed = child_context.get_variable("__playwright_pw__") is context.get_variable("__playwright_pw__")
+            self._close_browser(child_context, stop_playwright=not borrowed)
+
+    def _close_browser(self, context: ExecutionContext, stop_playwright: bool = True) -> None:
+        """Closes the browser and stops Playwright (unless it belongs to the caller), if this context holds them."""
         browser = context.get_variable("__playwright_browser__")
         pw = context.get_variable("__playwright_pw__")
 
@@ -163,7 +182,7 @@ class FlowInterpreter:
                 context.set_variable("__playwright_browser__", None)
                 context.set_variable("__playwright_page__", None)
 
-        if pw:
+        if pw and stop_playwright:
             try:
                 pw.stop()
                 self.logger.logger.info("Auto-cleanup: Stopped Playwright instance.")
@@ -954,6 +973,9 @@ class FlowInterpreter:
                 child_vars["__shared_browser__"] = True  # Safeguard signal
             if page:
                 child_vars["__playwright_page__"] = page
+        elif context.get_variable("__playwright_pw__"):
+            # Playwright allows one instance per thread: the subflow borrows it and opens its own browser
+            child_vars["__playwright_pw__"] = context.get_variable("__playwright_pw__")
 
         # 5. Spawn child interpreter with incremented call stack
         new_stack = list(self.call_stack) + [canonical_key]
@@ -965,6 +987,7 @@ class FlowInterpreter:
         )
 
         child_context = child_interpreter.run_flow(subflow_def, initial_vars=child_vars)
+        self._take_browser_back(context, child_context, shared=evaluated_params.get("propagate_sessions", True))
         # The subflow's steps are part of this run's record, in the order they ran (#62)
         context.step_results.extend(child_context.step_results)
         context.set_variable("__failures__", self._failure_count(context) + self._failure_count(child_context))
