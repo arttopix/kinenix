@@ -72,19 +72,19 @@ Docs and release:
 **Exit criteria**
 
 Automated:
-- [ ] `web.goto` navigates the current tab; a page that a subflow opens or switches to is the parent's page afterwards, so screenshots show the right page
-- [ ] `web.choose` picks an option in a custom dropdown (with and without a search box) and, when the option is missing, lists the visible options in the error
-- [ ] `web.get_list` reads repeated elements into rows, with `fields`, `add_columns`, `numeric_fields`, `required_fields`, and `min_rows`
-- [ ] `web.get_table` and `web.get_list` read every page of a paged list or table: `next_selector` is clicked until it is disabled or gone, `max_pages` limits the pages, and the rows of all pages are returned in order
-- [ ] Each action has tests against local HTML pages (no internet), declares `accepted_parameters`, and passes `kinenix validate`
-- [ ] Agent-interface foundation ([design/agent-interface.md](design/agent-interface.md), section 10): every action declares its side-effect kind (`email`, `files`, `web`, `network`, `none`), the existing ones included; new commands keep their logic in functions that return data, and `cli.py` only parses and prints
+- [x] `web.goto` navigates the current tab; a page that a subflow opens or switches to is the parent's page afterwards, so screenshots show the right page
+- [x] `web.choose` picks an option in a custom dropdown (with and without a search box) and, when the option is missing, lists the visible options in the error
+- [x] `web.get_list` reads repeated elements into rows, with `fields`, `add_columns`, `numeric_fields`, `required_fields`, and `min_rows`
+- [x] `web.get_table` and `web.get_list` read every page of a paged list or table: `next_selector` is clicked until it is disabled or gone, `max_pages` limits the pages, and the rows of all pages are returned in order
+- [x] Each action has tests against local HTML pages (no internet), declares `accepted_parameters`, and passes `kinenix validate`
+- [x] Agent-interface foundation ([design/agent-interface.md](design/agent-interface.md), section 10): every action declares its side-effect kind (`email`, `files`, `web`, `network`, `none`), the existing ones included; new commands keep their logic in functions that return data, and `cli.py` only parses and prints
 - [ ] All four test suites pass, and CI is green
 
 Field test:
 - [ ] The real insurance-quote flow uses `web.goto`, `web.choose`, `web.get_list`, and expressions (`len`, `join`, `number` instead of its workarounds) and runs on the Raspberry Pi worker
 
 Docs and release:
-- [ ] `docs/actions_reference.md` documents each action with a `flow.md` example
+- [x] `docs/actions_reference.md` documents each action with a `flow.md` example
 - [ ] CHANGELOG entry; TestPyPI checked; tag `v0.4.0b1`; PyPI checked
 
 **Compatibility:** new actions only. `web.open` still opens a new tab. A parent flow now sees the page its subflow left open (before, it kept its own page).

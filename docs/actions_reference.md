@@ -14,12 +14,14 @@ This document specifies the standard actions available in Kinenix. Each action l
    - [web.get_text](#webget_text)
    - [web.get_attribute](#webget_attribute)
    - [web.get_table](#webget_table)
+   - [web.get_list](#webget_list)
    - [web.wait_for](#webwait_for)
    - [web.is_visible](#webis_visible)
    - [web.press](#webpress)
    - [web.scroll](#webscroll)
    - [web.hover](#webhover)
    - [web.switch_tab](#webswitch_tab)
+   - [web.choose](#webchoose)
    - [web.select_option](#webselect_option)
    - [web.upload_file](#webupload_file)
    - [web.check](#webcheck)
@@ -225,7 +227,9 @@ Reads an HTML `<table>` into a list of rows, one dictionary per row keyed by the
 | `numeric_columns` | list | No | `[]` | Columns (after renaming) converted to numbers; thousands separators are removed, and blank or `-` cells become empty. Text that is not a number fails the step |
 | `add_columns` | dict | No | `{}` | Fixed values added as the first columns of every row, for example the currency a table belongs to |
 | `min_rows` | number | No | `0` | Fail the step when fewer rows are found, so an empty result stops the flow instead of producing an empty report |
-| `timeout` | number | No | `30000` | Milliseconds to wait for the table to exist |
+| `timeout` | number | No | `30000` | Milliseconds to wait for the table to exist, and for the content to change after each `next_selector` click |
+| `next_selector` | string | No | - | The "next page" button or link of a paged table (Kinenix 0.4.0b1). It is clicked until it is gone or disabled (`disabled`, `aria-disabled="true"`, or a `disabled` class on it or its parents, as in DataTables and Bootstrap), and the rows of every page are returned in order. Each click waits until the content has changed |
+| `max_pages` | number | No | `20` | The most pages read with `next_selector`. More pages than this fails the step instead of leaving pages out without notice |
 
 **Example:**
 ```markdown
@@ -239,6 +243,47 @@ Reads an HTML `<table>` into a list of rows, one dictionary per row keyed by the
 ```
 
 Returns, for example: `[{"Currency": "USD", "Date": "30 Dec 2024", "Buying Transfer Rate": 33.8296}, ...]`.
+
+**Example (paged table):**
+```markdown
+### 3. Read All Invoices (`web.get_table`)
+- **output_var:** `invoices`
+- **selector:** `#invoices`
+- **next_selector:** `#invoices_next`
+- **max_pages:** 50
+```
+
+---
+
+### `web.get_list`
+Reads repeated elements, such as product cards or search results, into a list of rows (Kinenix 0.4.0b1). One row per element that matches `selector`; each field is found inside that element. Use it where `web.get_table` does not apply because the page shows cards instead of a `<table>`. Text is trimmed and runs of spaces and line breaks become one space.
+
+**Parameters:**
+| Parameter | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `selector` | string | Yes | - | CSS selector or XPath of the repeated element (one card, one result) |
+| `fields` | dict | Yes | - | Column name to a selector inside each element. `".price"` reads the text, `"a@href"` reads an attribute, and `"."` (or `""`) reads the element itself. A field that is not found in an element is `""` |
+| `numeric_fields` | list | No | `[]` | Fields converted to numbers, the way `number()` reads them in expressions: the first number in the text, so `"15,434.75 บาท/ปี"` is `15434.75`. Blank and `-` become empty; text with no number fails the step |
+| `required_fields` | list | No | `[]` | Fields that must not be empty; an element without one fails the step, naming the element and what it reads |
+| `add_columns` | dict | No | `{}` | Fixed values added as the first columns of every row, for example the request the results belong to |
+| `min_rows` | number | No | `0` | Fail the step when fewer elements are found |
+| `timeout` | number | No | `30000` | Milliseconds to wait for the first element, and for the content to change after each `next_selector` click |
+| `next_selector` | string | No | - | The "next page" or "more" control, as in `web.get_table`; the rows of every page are returned in order |
+| `max_pages` | number | No | `20` | The most pages read with `next_selector`; more fails the step |
+
+**Example:**
+```markdown
+### 5. Read Offered Packages (`web.get_list`)
+- **output_var:** `packages`
+- **selector:** `[data-testid=package-card]`
+- **fields:** {"name": "h3", "premium": ".price", "details": "a@href"}
+- **numeric_fields:** ["premium"]
+- **required_fields:** ["name"]
+- **add_columns:** {"request_id": "${req.request_id}"}
+- **min_rows:** 1
+```
+
+Returns, for example: `[{"request_id": "R001", "name": "Class 1 Plus", "premium": 15434.75, "details": "/packages/123"}, ...]`.
 
 ---
 
@@ -382,8 +427,40 @@ Downloads a file by clicking an export button or resolving a direct link.
 
 ---
 
+### `web.choose`
+Picks an option in a dropdown by its visible name (Kinenix 0.4.0b1). It works with the custom dropdowns of modern sites (Radix and shadcn Select, cmdk combobox, Headless UI, MUI): it clicks the dropdown, types into its search box when `search` is `true`, and clicks the option with that name. When `selector` points to a native `<select>`, it selects the option with that label. When the option is not there, the error lists the options that are, for example `option 'HONDAX' not found; available: HONDA, HONDA BIGWING, HYUNDAI`.
+
+Options are found by their accessibility role (`role="option"`), which these libraries set; `<option>` elements of other native selects on the page are not counted.
+
+**Parameters:**
+| Parameter | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `selector` | string | Either | - | CSS selector or XPath of the element that opens the dropdown (the button or input you click), or of a native `<select>` |
+| `label` | string | Either | - | Label identifier of that element |
+| `option` | string | Yes | - | Name of the option to pick. An empty value (for example a missing variable) fails the step |
+| `exact` | boolean | No | `true` | `true` needs the whole name, so `HONDA` does not pick `HONDA BIGWING`. `false` picks the first option whose name contains `option`, ignoring case |
+| `search` | boolean | No | `false` | Type `option` into the dropdown's search box before picking, for long lists that show only what matches |
+| `search_selector` | string | No | - | The search box, when it is not found by itself (cmdk input, `role=combobox` input, `type=search` input, or an input in the open dialog or list) |
+| `timeout` | number | No | `10000` | Milliseconds to wait for the dropdown and for the option to appear |
+
+**Example:**
+```markdown
+### 3. Car Brand (`web.choose`)
+- **selector:** `[data-testid=carBrand]`
+- **option:** ${req.brand}
+
+### 4. Car Model (`web.choose`)
+- **selector:** `[data-testid=carModel]`
+- **option:** ${req.model}
+- **search:** true
+```
+
+**Output:** `{"option": "<name of the option picked>", "status": "chosen"}`
+
+---
+
 ### `web.select_option`
-Selects one or more options in an HTML `<select>` dropdown element. Supports automatic semantic AI matching via OpenThai-SystemOne / Ollama to map abbreviations (e.g. "กทม." -> "กรุงเทพมหานคร") against live page options.
+Selects one or more options in an HTML `<select>` dropdown element. For custom dropdowns that are not a `<select>`, use [`web.choose`](#webchoose). Supports automatic semantic AI matching via OpenThai-SystemOne / Ollama to map abbreviations (e.g. "กทม." -> "กรุงเทพมหานคร") against live page options.
 
 **Parameters:**
 | Parameter | Type | Required | Default | Description |

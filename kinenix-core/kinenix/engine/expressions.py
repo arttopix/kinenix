@@ -124,6 +124,11 @@ def _parse_number(x: Any) -> Any:
     return -value if match.group("neg") else value
 
 
+def parse_number(x: Any) -> Any:
+    """The first number in a text, as number() reads it: "15,434.75 บาท/ปี" is 15434.75; empty gives None."""
+    return _parse_number(x)
+
+
 def _trim(x: Any) -> str:
     return _text(x).strip()
 
