@@ -9,6 +9,7 @@ from ..models.context import ExecutionContext
 @register_action("logic.set_variable")
 class SetVariableAction(BaseAction):
     accepted_parameters = ('name', 'value')
+    side_effects = ('none',)
 
     def execute(self, parameters: Dict[str, Any], context: ExecutionContext) -> Any:
         name = parameters.get("name")
@@ -21,6 +22,7 @@ class SetVariableAction(BaseAction):
 @register_action("logic.delay")
 class DelayAction(BaseAction):
     accepted_parameters = ('seconds',)
+    side_effects = ('none',)
 
     def execute(self, parameters: Dict[str, Any], context: ExecutionContext) -> Any:
         seconds = float(parameters.get("seconds", 1.0))
@@ -32,6 +34,7 @@ class DelayAction(BaseAction):
 class IfAction(BaseAction):
     """Conditional branching action. Handled with sub_steps by FlowInterpreter."""
     accepted_parameters = ('condition', 'left', 'operator', 'right')
+    side_effects = ('none',)
 
     def execute(self, parameters: Dict[str, Any], context: ExecutionContext) -> Any:
         return {"action": "logic.if"}
@@ -41,6 +44,7 @@ class IfAction(BaseAction):
 class LoopAction(BaseAction):
     """Loop iteration action. Handled with sub_steps by FlowInterpreter."""
     accepted_parameters = ('items', 'item_var', 'item_label')
+    side_effects = ('none',)
 
     def execute(self, parameters: Dict[str, Any], context: ExecutionContext) -> Any:
         return {"action": "logic.loop"}
@@ -50,6 +54,7 @@ class LoopAction(BaseAction):
 class AppendAction(BaseAction):
     """Appends an item to a list or datatable in context variables."""
     accepted_parameters = ('target', 'var_name', 'list_var', 'item', 'extend')
+    side_effects = ('none',)
 
     def execute(self, parameters: Dict[str, Any], context: ExecutionContext) -> Any:
         target = parameters.get("target") or parameters.get("var_name") or parameters.get("list_var")

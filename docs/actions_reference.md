@@ -1,6 +1,6 @@
 # Kinenix Actions Reference Guide
 
-This document specifies the standard actions available in Kinenix. Each action lists its parameters, an example step in `flow.md` (see the [Flow Markdown specification](flow_markdown_spec.md)), and, where useful, the shape of its output. `kinenix actions` lists every action with the parameters it accepts.
+This document specifies the standard actions available in Kinenix. Each action lists its parameters, an example step in `flow.md` (see the [Flow Markdown specification](flow_markdown_spec.md)), and, where useful, the shape of its output. `kinenix actions` lists every action with the parameters it accepts and, in brackets, what it can do outside the run: `email`, `files` (writes, moves, or deletes), `web` (opens a site, clicks, types, uploads), or `network` (calls another service). Actions without brackets only read or compute.
 
 ---
 
@@ -8,6 +8,7 @@ This document specifies the standard actions available in Kinenix. Each action l
 
 1. [Web Automation (`web.*`)](#web-automation-web)
    - [web.open](#webopen)
+   - [web.goto](#webgoto)
    - [web.click](#webclick)
    - [web.type](#webtype)
    - [web.get_text](#webget_text)
@@ -86,6 +87,36 @@ Launches a browser instance and navigates to a target URL.
 - **url:** https://rpachallenge.com/
 - **headless:** true
 ```
+
+---
+
+### `web.goto`
+Goes to a URL **in the current tab** (Kinenix 0.4.0b1). `web.open` opens a new tab every time; in a loop or a subflow that returns to the same form, `web.goto` keeps one tab and starts from a fresh page each time. When no browser is open yet, it opens one, so a subflow can start with `web.goto`.
+
+**Parameters:**
+| Parameter | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `url` | string | Yes | - | URL to go to. An empty value (for example `${config.url}` with no config loaded) fails the step |
+| `wait_until` | string | No | `load` | When the page counts as loaded: `load`, `domcontentloaded`, `networkidle` (no network traffic for 0.5 s; slower), or `commit` |
+| `timeout` | number | No | `30000` | Navigation timeout in milliseconds |
+| `headless` | boolean | No | `false` | Only used when `web.goto` opens the browser |
+
+**Example:**
+```markdown
+### 2. Each Request (`logic.loop`)
+- **items:** `${requests}`
+- **item_var:** `req`
+- **item_label:** ${req.request_id}
+- **Sub-steps:**
+  - Back To The Quote Form (`web.goto`):
+    - **url:** ${config.quote_url}
+    - **wait_until:** domcontentloaded
+  - Process One Request (`flow.call`):
+    - **flow:** ./subflows/process_one.md
+    - **inputs:** {"req": "${req}"}
+```
+
+**Output:** `{"url": "<url after redirects>", "title": "<page title>", "status": "navigated"}`
 
 ---
 
@@ -1133,7 +1164,7 @@ Executes an external child flow (subflow) within an isolated context.
 | `flow` | string | Yes | - | Path to the child flow: `./subflows/name.md` (compiled when it runs), `@shared/name.md`, a `.json` file, or a flow name. Without an extension, `.md` is used before `.json` |
 | `inputs` | dict | No | `{}` | Values passed into the subflow (evaluated in the parent). Each key should be declared in the subflow's `## Variables`; `kinenix validate` reports undeclared keys. A `config` key is merged over the subflow's config |
 | `inherit_config` | boolean | No | `false` | For a shared subflow (`@shared/` or outside the bundle): pass the caller's config, merged over the subflow's own. Subflows of the bundle always get the bundle's config |
-| `propagate_sessions` | boolean | No | `true` | Share active Playwright browser sessions with child flow |
+| `propagate_sessions` | boolean | No | `true` | Share the browser with the subflow. Afterwards the caller continues on the page the subflow left (a page it went to or switched to, or a browser it opened), and a browser the subflow closed is closed for the caller too. With `false`, the subflow uses its own browser, which is closed when the subflow ends |
 | `outputs` | dict | No | `null` | Optional direct mapping from child variables to parent variables |
 
 **Variable Resolution & Priority:**

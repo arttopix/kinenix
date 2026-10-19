@@ -67,24 +67,21 @@ def test_get_table_errors(params, message):
         _run("web.get_table", {"selector": "table", **params}, ctx)
 
 
-def test_get_table_script_in_a_real_browser():
-    """Runs the table-reading JavaScript in Chromium when it is installed (skipped in CI)."""
-    sync_api = pytest.importorskip("playwright.sync_api")
+def test_get_table_script_in_a_real_browser(chromium):
+    """Runs the table-reading JavaScript in Chromium (CI installs it; skipped on a machine without it)."""
+    from playwright import sync_api
     html = """
       <table id="with-head"><thead><tr><th>Date</th><th> Rate </th></tr></thead>
         <tbody><tr><td>1 Dec</td><td>34.1</td></tr><tr><td></td><td></td></tr><tr><td>2 Dec</td><td>34.2</td></tr></tbody></table>
       <table id="no-head"><tr><td>A</td><td></td></tr><tr><td>1</td><td>2</td></tr></table>
     """
-    try:
-        with sync_api.sync_playwright() as p:
-            browser = p.chromium.launch(headless=True)
-            page = browser.new_page()
-            page.set_content(html)
-            with_head = page.locator("#with-head").evaluate(_TABLE_TO_ROWS_JS)
-            no_head = page.locator("#no-head").evaluate(_TABLE_TO_ROWS_JS)
-            browser.close()
-    except Exception as e:  # browser not installed
-        pytest.skip(f"Chromium not available: {e}")
+    with sync_api.sync_playwright() as p:
+        browser = p.chromium.launch(headless=True)
+        page = browser.new_page()
+        page.set_content(html)
+        with_head = page.locator("#with-head").evaluate(_TABLE_TO_ROWS_JS)
+        no_head = page.locator("#no-head").evaluate(_TABLE_TO_ROWS_JS)
+        browser.close()
     assert with_head == {"headers": ["Date", "Rate"], "data": [["1 Dec", "34.1"], ["2 Dec", "34.2"]]}
     assert no_head == {"headers": ["A", "Column 2"], "data": [["1", "2"]]}
 

@@ -149,6 +149,7 @@ class AiDecideAction(BaseAction):
     Computes calibrated probabilities in a single forward pass without text generation hallucination.
     """
     accepted_parameters = ('base_url', 'fallback_to_ollama', 'question', 'questions', 'state', 'timeout')
+    side_effects = ('network',)
 
     def execute(self, parameters: Dict[str, Any], context: ExecutionContext) -> Any:
         state = parameters.get("state")

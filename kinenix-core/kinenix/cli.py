@@ -384,11 +384,15 @@ def main():
             print(f"No action starts with '{args.filter}'.", file=sys.stderr)
             sys.exit(1)
         width = max(len(n) for n in names) + 2
-        print("Actions and the parameters they accept (details: docs/actions_reference.md)\n")
+        print("Actions and the parameters they accept (details: docs/actions_reference.md)")
+        print("[...] is what the action can do outside the run: email, files, web, network\n")
         for name in names:
-            params = ActionRegistry.get(name).accepted_parameters
+            action = ActionRegistry.get(name)
+            params = action.accepted_parameters
             listed = ", ".join(params) if params else "(none)"
-            print(f"  {name:<{width}}{listed}")
+            effects = [kind for kind in (action.side_effects or ()) if kind != "none"]
+            marker = f"  [{', '.join(effects)}]" if effects else ""
+            print(f"  {name:<{width}}{listed}{marker}")
         print("\nEvery step also accepts: description, output_var, condition, on_error, max_retries, retry_interval, fallback_step_id")
         sys.exit(0)
 
