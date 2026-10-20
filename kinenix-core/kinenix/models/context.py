@@ -28,7 +28,7 @@ class StepResult(BaseModel):
     failure: Optional[Dict[str, Any]] = Field(
         default=None,
         description="For a failed step: exception, root_cause, suggested_fix, screenshot, handled "
-                    "(stopped, continued, fallback), from_subflow (the failure is the subflow step's, recorded there)")
+                    "(stopped, continued, fallback, next_item), from_subflow (the failure is the subflow step's, recorded there)")
 
 
 class ExecutionMetrics(BaseModel):

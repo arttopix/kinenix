@@ -98,7 +98,8 @@ All parameters passed to the action must be written as Markdown bullet items dir
 #### Supported Value Types:
 - **String:** `- **url:** https://example.com`
 - **Boolean:** `- **headless:** false` or `- **clean_headers:** true`
-- **Number:** `- **timeout:** 5000` or `- **delay:** 1.5`
+- **Number:** `- **timeout:** 5000` or `- **delay:** 1.5`. A value with a leading zero, such as `- **branch:** 0012`, stays text, so codes keep their zeros. To make any value text, quote it: `"120"`
+- **List or object (JSON):** `- **columns:** ["Date", "Rate"]` or `- **item:** {"net": "${number(inv.amount)}"}`. Put quotes around `${...}` inside JSON; a value written as `{...}` or `[...]` that is not valid JSON is read as text, and `kinenix validate` reports it
 - **Dynamic Variable Expression:** `- **url:** ${config.website}`
 - **Output Variable:** `- **output_var:** my_result` (stores action result in context)
 - **Error Handling:** `- **on_error:** retry`, `- **max_retries:** 2`, `- **retry_interval:** 3.0`, `- **fallback_step_id:** step_9`. These four keys are compiled into the step's `error_handler`, not into the action parameters (see [Step Resilience & Error Handling](actions_reference.md#step-resilience--error-handling-error_handler)).
@@ -286,6 +287,28 @@ Any step can retry and then decide what happens:
 | not set, `fail`, or `stop` | The flow fails: the remaining steps are skipped and `## On Error` runs |
 | `retry` | Same as `fail` (kept for flows written before 0.2.0b4) |
 | `continue` | The failure is recorded and the flow goes on with the next step |
+| `next_item` | For a step inside a `logic.loop` (Kinenix 0.4.0b1): the failure is recorded, the rest of this item's sub-steps are skipped, and the loop goes on with its next item. The item counts as failed. Outside a loop it stops the flow like `fail`, and `kinenix validate` reports it |
+
+`continue` inside a loop goes on with the next sub-step of the same item, which suits an optional step such as a screenshot. To give up on an item, for example when `flow.fail` finds bad data, use `next_item`:
+
+```markdown
+> Requires: kinenix>=0.4.0b1
+
+### 1. Each Invoice (`logic.loop`)
+- **items:** ${invoices}
+- **item_var:** inv
+- **item_label:** ${inv.no}
+- **Sub-steps:**
+  - No Amount (`flow.fail`):
+    - **condition:** `${inv.amount} is empty`
+    - **message:** Invoice ${inv.no} has no amount
+    - **on_error:** next_item
+  - Add To Summary (`logic.append`):
+    - **target:** summary
+    - **item:** {"no": "${inv.no}", "amount": "${number(inv.amount)}"}
+```
+
+With nested loops, `next_item` ends the item of the innermost loop. In a subflow called for each item, set `next_item` on the `flow.call` step in the loop; the subflow's own steps are not inside that loop.
 
 `fallback_step_id` still runs a recovery step instead. `max_retries` and `retry_interval` accept `${...}`, for example `${config.retries}`. Business errors (`flow.fail`) are not retried.
 

@@ -68,6 +68,25 @@ def _block_value(body_lines: List[Line], start: int, key_indent: int) -> Tuple[O
     return text, start + len(collected)
 
 
+def _json_issue(lineno: int, key: str, val_raw: str, val: Any, step_name: str) -> Optional[str]:
+    """A value written as {...} or [...] that is not valid JSON is read as text; say so instead of failing later."""
+    text = val_raw.strip()
+    if text.startswith("`") and text.endswith("`") and len(text) >= 2:
+        text = text[1:-1].strip()
+    # [data-testid=x] is a CSS selector, not a list: a JSON list starts with a value ("a", 1, {, [, or ${...})
+    looks_like_list = text.startswith("[") and text.endswith("]") and re.match(r'^\[\s*["\d\-{\[$\]]', text)
+    if not isinstance(val, str) or not ((text.startswith("{") and text.endswith("}")) or looks_like_list):
+        return None
+    try:
+        json.loads(text)
+    except ValueError as e:
+        hint = (' Put quotes around ${...} inside JSON, for example {"net": "${number(inv.amount)}"}.'
+                if "${" in text else "")
+        return (f"Line {lineno}: '{key}' in step '{step_name}' looks like JSON but is not valid JSON ({e}), "
+                f"so it is read as text.{hint}")
+    return None
+
+
 def _stray_line_issue(lineno: int, text: str, step_name: str) -> str:
     shown = text if len(text) <= 60 else text[:57] + "..."
     return (f"Line {lineno}: '{shown}' in step '{step_name}' is not a parameter and was ignored. "
@@ -108,8 +127,8 @@ def parse_value(val_str: str) -> Any:
     if low in ("null", "none"):
         return None
 
-    # Integers
-    if re.match(r"^-?\d+$", val_str):
+    # Integers; codes with a leading zero ("0012", a postal code) stay text so the zero is kept
+    if re.match(r"^-?\d+$", val_str) and not re.match(r"^-?0\d", val_str):
         try:
             return int(val_str)
         except ValueError:
@@ -258,6 +277,9 @@ def _parse_sub_steps_block(lines: List[Line], parent_id: str, issues: Optional[L
                     step_dict.setdefault("error_handler", {}).update(val)
                 else:
                     step_dict["parameters"][key] = val
+                problem = _json_issue(lineno, key, val_raw, val, name) if issues is not None else None
+                if problem:
+                    issues.append(problem)
             elif issues is not None:
                 issues.append(_stray_line_issue(lineno, text, name))
             i += 1
@@ -484,6 +506,9 @@ def markdown_to_flow(md_content: str, issues: Optional[List[str]] = None) -> Flo
                     step_dict.setdefault("error_handler", {}).update(val)
                 else:
                     step_dict["parameters"][key] = val
+                problem = _json_issue(lineno, key, val_raw, val, name) if issues is not None else None
+                if problem:
+                    issues.append(problem)
             elif issues is not None:
                 issues.append(_stray_line_issue(lineno, text, name))
             i += 1

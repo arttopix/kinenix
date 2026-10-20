@@ -109,6 +109,8 @@ def test_retries_come_first_then_on_error_continue(tmp_path):
     assert not ctx.has_error
     assert read(bundle, "after.txt") == "2 retries, then Read Missing"
     assert [r.status for r in ctx.step_results] == ["failed", "success"]
+    # #102: the run succeeded, so it has no failure; the continued one is on its step result
+    assert ctx.failure_details is None
 
 
 def test_a_stopping_failure_after_a_continued_one_is_the_runs_failure(tmp_path):

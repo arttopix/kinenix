@@ -99,7 +99,7 @@ Docs and release:
 
 | Example | Business story | Patterns it proves |
 | :--- | :--- | :--- |
-| `invoice_check` | A folder of supplier invoices (Excel) is checked: totals, duplicates, missing PO numbers. Good invoices go to a summary workbook, bad ones to an exceptions list, processed files are moved, and the output is zipped and e-mailed | `file.list` loops with `item_label`, expressions, `flow.fail` per item with `on_error: continue`, On Error and Finally, `file.zip`, `email.send` |
+| `invoice_check` | A folder of supplier invoices (Excel) is checked: totals, duplicates, missing PO numbers. Good invoices go to a summary workbook, bad ones to an exceptions list, processed files are moved, and the output is zipped and e-mailed | `file.list` loops with `item_label`, expressions, `flow.fail` per item with `on_error: next_item`, On Error and Finally, `file.zip`, `email.send` |
 | `quote_requests` | Requests from a CSV are entered one by one into a quote form (a local copy of a modern insurance site), the offered packages are read, and a results file plus a list of failed requests is e-mailed | subflow per item, `web.goto`, `web.choose`, `web.get_list`, `${error.loop.item}`, screenshots on failure |
 | `daily_sales_report` | A sales table is read from a portal (local pages), compared with targets from Excel, and the differences are reported; it runs on a worker schedule and reports to the Hub | `web.get_table`, expressions, `kinenix-worker schedule`, `kinenix hub report` |
 
