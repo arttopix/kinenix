@@ -283,7 +283,7 @@
             }
           ],
           "default": null,
-          "description": "For a failed step: exception, root_cause, suggested_fix, screenshot, handled (stopped, continued, fallback), from_subflow (the failure is the subflow step's, recorded there)",
+          "description": "For a failed step: exception, root_cause, suggested_fix, screenshot, handled (stopped, continued, fallback, next_item), from_subflow (the failure is the subflow step's, recorded there)",
           "title": "Failure"
         }
       },

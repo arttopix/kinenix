@@ -9,6 +9,9 @@ from kinenix.engine.markdown import (
     load_flow,
     flow_to_json_text,
     export_json_to_markdown,
+    format_value,
+    markdown_issues,
+    parse_value,
 )
 
 
@@ -218,3 +221,35 @@ def test_condition_backtick_stripping():
     assert fi._evaluate_condition_expr("`false == true`") is False
 
 
+
+
+@pytest.mark.parametrize("text, expected", [
+    ("0012", "0012"), ("-007", "-007"), ("0", 0), ("-0", 0), ("120", 120), ("-15", -15), ("0.5", 0.5),
+])
+def test_codes_with_a_leading_zero_stay_text(text, expected):
+    # #103: a branch code or postal code such as 0012 keeps its zero
+    assert parse_value(text) == expected and type(parse_value(text)) is type(expected)
+    assert parse_value(format_value(expected)) == expected
+
+
+def test_json_like_values_that_are_not_json_are_reported():
+    # #103: they are read as text, so an action expecting a dict or list would fail later at run time
+    issues = markdown_issues("""# T
+
+## Steps
+
+### 1. Add (`logic.append`)
+- **target:** rows
+- **item:** {"net": ${number(inv.amount)}}
+- **items:** [1, 2,]
+- **fine:** {"net": "${number(inv.amount)}"}
+- **text:** ${a} and [b]
+- **selector:** [data-testid=carBrand]
+- **other:** `[role=option] >> nth=0`
+- **ids:** ["${a}", ${b}]
+""")
+    assert len(issues) == 3  # CSS attribute selectors are not lists
+    assert issues[0].startswith("Line 7: 'item' in step 'Add' looks like JSON but is not valid JSON")
+    assert 'for example {"net": "${number(inv.amount)}"}' in issues[0]
+    assert issues[1].startswith("Line 8: 'items' in step 'Add'") and "${" not in issues[1]
+    assert issues[2].startswith("Line 13: 'ids' in step 'Add'")

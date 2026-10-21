@@ -25,6 +25,8 @@ NOT_SECRET_ENV = {
     "KINENIX_HUB_URL", "KINENIX_WORKER_ID", "KINENIX_FLOWS_DIR", "KINENIX_HEARTBEAT_INTERVAL", "KINENIX_LOG_DIR",
     "KINENIX_HUB_HOST", "KINENIX_HUB_PORT", "KINENIX_HUB_DASHBOARD_USER", "KINENIX_HUB_SETTINGS_FILE",
     "KINENIX_HUB_WORKER_OFFLINE_SECONDS", "CENTRAL_LLM_URL",
+    # Set by Linux and macOS shells to the current and previous working directory; "pwd" here is not a password
+    "PWD", "OLDPWD",
 }
 
 # Ids Kinenix creates hold no secrets, and the Hub matches records by them, so they are never changed

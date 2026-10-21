@@ -80,7 +80,7 @@ The same objects appear in every command and in the MCP server; their fields fol
 | :--- | :--- |
 | **Run** | `run_id`, `flow`, `worker`, `status`, `started`, `duration_seconds`, `items {total, done, failed}`, `failures` (list of Failure), `report_md`, `log_path`, `kinenix_version` |
 | **Step** | `seq`, `section`, `step`, `action`, `status`, `started`, `duration_seconds`, `path`, `subflow`, `line`, `item`, `retries`, `error` |
-| **Failure** | `step`, `action`, `type` (`Business`, `Technical`), `handled` (`stopped`, `continued`, `fallback`), `message`, `root_cause`, `suggested_fix`, `path`, `subflow`, `line`, `item`, `retries`, `screenshot` |
+| **Failure** | `step`, `action`, `type` (`Business`, `Technical`), `handled` (`stopped`, `continued`, `fallback`, `next_item`), `message`, `root_cause`, `suggested_fix`, `path`, `subflow`, `line`, `item`, `retries`, `screenshot` |
 | **Issue** (from validate) | `code`, `severity` (`error`, `warning`), `message`, `file`, `line`, `step`, `hint` |
 | **Flow** | `name`, `path`, `description`, `requires`, `inputs` (from `## Variables`), `side_effects`, `last_run` |
 

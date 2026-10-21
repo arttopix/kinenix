@@ -19,7 +19,7 @@ A worker sends one execution log per run when the flow ends ([logging.md](loggin
 
 - Times are UTC, stored as text `YYYY-MM-DD HH:MM:SS.ffffff`, so they sort and compare as text: `failed_at >= datetime('now', '-1 day')`.
 - `section` is where a step is in `flow.md`: `steps`, `on_error` (`## On Error`), or `finally` (`## Finally`).
-- `handled` is what happened after a step failed: `stopped` (the run stopped; On Error ran), `continued` (`on_error: continue`, or a step in On Error or Finally), `fallback` (`fallback_step_id` ran).
+- `handled` is what happened after a step failed: `stopped` (the run stopped; On Error ran), `continued` (`on_error: continue`, or a step in On Error or Finally), `fallback` (`fallback_step_id` ran), `next_item` (`on_error: next_item`: the loop went on with its next item).
 - `details` columns are JSON with a version key `v`; the views expose their keys as columns. The views exist on SQLite only.
 
 ## Views
@@ -71,7 +71,7 @@ One row per failure. Answers: what failed, where, on which item, how it was hand
 | `loop_index` | Its position, from 1 | `7` |
 | `loop_of` | Number of items in that loop | `12` |
 | `retries` | Retries made before the step gave up | `2` |
-| `handled` | `stopped`, `continued`, or `fallback` | `continued` |
+| `handled` | `stopped`, `continued`, `fallback`, or `next_item` | `continued` |
 | `error_type` | `Technical` or `Business` | `Technical` |
 | `exception` | Exception class | `TimeoutError` |
 | `message` | Error message | `Timeout 30000ms exceeded waiting for option HONDA` |
@@ -200,7 +200,7 @@ One row per failure, also failures the flow continued after, so a run that succe
 | `step_name` | Step | `Choose Brand` |
 | `action` | Action | `web.click` |
 | `error_type` | `Technical` or `Business` | `Technical` |
-| `handled` | `stopped`, `continued`, or `fallback` | `continued` |
+| `handled` | `stopped`, `continued`, `fallback`, or `next_item` | `continued` |
 | `message` | Error message | `Timeout 30000ms exceeded` |
 | `details` | JSON, keys below | `{"v": 1, "exception": ...}` |
 

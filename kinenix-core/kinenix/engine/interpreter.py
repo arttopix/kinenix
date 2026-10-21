@@ -107,6 +107,10 @@ def resolve_subflow_path(flow_target: str, context: Any) -> Path:
     raise FileNotFoundError(f"Subflow file not found: '{flow_target}'")
 
 
+class _NextItem(Exception):
+    """on_error: next_item (#102): the failure is recorded, and the innermost logic.loop goes on with its next item."""
+
+
 class FlowInterpreter:
     """
     Interpreter that parses FlowDefinition, evaluates expressions, and executes steps sequentially.
@@ -621,9 +625,12 @@ class FlowInterpreter:
             context.set_variable("error", self._error_info(step, last_error, failure_diag, attempt, context))
 
         section = context.get_variable("__section__") or "steps"
+        on_error = str(handler.on_error).strip().lower() if handler else ""
         if handler and handler.fallback_step_id:
             handled = "fallback"
-        elif (handler and str(handler.on_error).strip().lower() == "continue") or section != "steps":
+        elif on_error == "next_item" and context.get_variable("__loop_depth__"):
+            handled = "next_item"  # outside a loop, next_item stops the run like fail (kinenix validate says so)
+        elif on_error == "continue" or section != "steps":
             handled = "continued"  # On Error and Finally go on with their next step
         else:
             handled = "stopped"
@@ -660,9 +667,6 @@ class FlowInterpreter:
         if handled == "stopped":
             context.set_variable("__stopping_result__", origin or result)
 
-        if context.failure_details is None:
-            context.failure_details = failure_diag
-
         if step.error_handler and step.error_handler.fallback_step_id:
             fallback_id = step.error_handler.fallback_step_id
             fallback_step = self._step_map.get(fallback_id)
@@ -677,8 +681,10 @@ class FlowInterpreter:
             self._execute_step(fallback_step, context)
             return
 
-        if handler and str(handler.on_error).strip().lower() == "continue":
+        if on_error == "continue":
             return
+        if handled == "next_item":
+            raise _NextItem(str(last_error)) from last_error
 
         # The failure that stops Steps is the run's failure, also after earlier failures that were continued
         if (context.get_variable("__section__") or "steps") == "steps":
@@ -696,6 +702,9 @@ class FlowInterpreter:
         loops = list(context.get_variable("__loops__") or [])
         location = list(context.get_variable("__location__") or [context.flow_name])
         context.set_variable("__location__", location + [step.name])
+        # Loops of this flow only: a subflow called inside a loop starts outside any loop of its own
+        depth = int(context.get_variable("__loop_depth__") or 0)
+        context.set_variable("__loop_depth__", depth + 1)
         # A loop with item_label works through items; the run counts them as done or failed
         counts = context.get_variable("__items__")
         counted = (step.parameters.get("item_label") not in (None, "") and isinstance(counts, dict)
@@ -716,6 +725,8 @@ class FlowInterpreter:
                         if context.get_variable("__early_exit__"):
                             break
                         self._execute_step(sub_step, context)
+                except _NextItem:
+                    pass  # the failure was recorded; the item counts as failed below
                 except Exception:
                     if counted:
                         counts["failed"] += 1
@@ -725,6 +736,7 @@ class FlowInterpreter:
         finally:
             context.set_variable("__loops__", loops)
             context.set_variable("__location__", location)
+            context.set_variable("__loop_depth__", depth)
 
         end_time = local_now()
         duration = (end_time - start_time).total_seconds()

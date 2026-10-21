@@ -31,7 +31,8 @@ STEP_DETAILS_KEYS = ("v", "line", "path", "subflow", "loop", "retries", "skipped
 FAILURE_DETAILS_KEYS = ("v", "step_id", "section", "exception", "root_cause", "suggested_fix", "path", "subflow",
                         "line", "loop", "retries", "screenshot", "on_error")
 
-HANDLED_WORDS = {"stopped": "run stopped", "continued": "continued", "fallback": "fallback ran"}
+HANDLED_WORDS = {"stopped": "run stopped", "continued": "continued", "fallback": "fallback ran",
+                 "next_item": "went on with the next item"}
 SECTION_TITLES = {"on_error": "On Error", "finally": "Finally"}
 
 
