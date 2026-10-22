@@ -61,6 +61,15 @@ def test_unknown_messages_are_not_guessed(message):
     assert explain(message) is None
 
 
+def test_a_blocked_hover_is_called_a_hover():
+    # Field test: web.hover on a heading under an open menu was reported as "The click on ..."
+    message = ('Locator.hover: Timeout 10000ms exceeded.\nCall log:\n  - waiting for locator(":text-is(\'Quote\')")\n'
+               '      - <div class="submenu">…</div> from <nav data-cy="header">…</nav> subtree intercepts pointer events\n')
+    cause, _ = explain(message)
+    assert cause.startswith('The hover on locator(":text-is(\'Quote\')") was blocked: nav[data-cy=header] (menu)')
+    assert "so the hover would have hit" in cause
+
+
 def test_an_unknown_blocker_suggests_waiting_for_it_to_go():
     message = ('Locator.click: Timeout 1000ms exceeded.\n  - waiting for locator("#b")\n'
                '      - <span class="toast">…</span> intercepts pointer events\n')
