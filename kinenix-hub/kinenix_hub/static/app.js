@@ -23,14 +23,28 @@ async function loadDashboardData() {
   }
 }
 
+// A run that finished, but with failed work items or steps on the way (#110)
+function isPartial(e) {
+  return !e.has_error && e.status === 'partial';
+}
+
+function partialText(e) {
+  const d = e.details || {};
+  if (d.items_total && d.items_failed) return `${d.items_failed} จาก ${d.items_total} รายการไม่สำเร็จ`;
+  if (d.failure_count) return `มี ${d.failure_count} ขั้นตอนที่ไม่สำเร็จ`;
+  return 'มีบางขั้นตอนที่ไม่สำเร็จ';
+}
+
 function renderKPIs(executions) {
   const total = executions.length;
   const failed = executions.filter(e => e.has_error || e.status === 'failed').length;
+  const partial = executions.filter(isPartial).length;
   const success = executions.filter(e => e.status === 'success').length;
   const rate = total > 0 ? Math.round((success / total) * 100) : 100;
 
   document.getElementById('kpi-executions-total').innerText = total;
-  document.getElementById('kpi-success-rate').innerText = `${rate}% ความสำเร็จ (${success} สำเร็จ, ${failed} ผิดพลาด)`;
+  document.getElementById('kpi-success-rate').innerText =
+    `${rate}% ความสำเร็จ (${success} สำเร็จ, ${partial} สำเร็จบางส่วน, ${failed} ผิดพลาด)`;
   document.getElementById('kpi-triages-total').innerText = failed;
 }
 
@@ -99,6 +113,8 @@ function renderExecutions(executions) {
 
   if (currentFilter === 'failed') {
     filtered = executions.filter(e => e.has_error || e.status === 'failed');
+  } else if (currentFilter === 'partial') {
+    filtered = executions.filter(isPartial);
   } else if (currentFilter === 'success') {
     filtered = executions.filter(e => !e.has_error && e.status === 'success');
   }
@@ -117,8 +133,10 @@ function renderExecutions(executions) {
   tbody.innerHTML = filtered.map(e => {
     const isError = e.has_error || e.status === 'failed';
     const statusPill = isError
-      ? `<span class="px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-rose-500/15 text-rose-400 border border-rose-500/30">Failed (${escapeHtml(e.failed_step_name || e.failed_step_id || 'Error')})</span>`
-      : `<span class="px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">Success</span>`;
+      ? `<span class="px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-rose-500/15 text-rose-400 border border-rose-500/30">ล้มเหลว (${escapeHtml(e.failed_step_name || e.failed_step_id || 'Error')})</span>`
+      : isPartial(e)
+        ? `<span class="px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-amber-500/15 text-amber-300 border border-amber-500/30">สำเร็จบางส่วน · ${escapeHtml(partialText(e))}</span>`
+        : `<span class="px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">สำเร็จ</span>`;
 
     // The ID travels as data (data-id), never inside the onclick JavaScript, so no value can become code
     const stepsButton = `<button data-id="${escapeHtml(e.id)}" onclick="openStepsModal(this.dataset.id)" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-medium transition">
@@ -148,7 +166,7 @@ function renderExecutions(executions) {
 
 function filterExecutions(filter) {
   currentFilter = filter;
-  ['all', 'failed', 'success'].forEach(f => {
+  ['all', 'failed', 'partial', 'success'].forEach(f => {
     const btn = document.getElementById(`filter-${f}`);
     if (f === filter) {
       btn.className = 'text-xs px-3 py-1.5 rounded-lg bg-sky-600 text-white font-medium transition';
@@ -219,7 +237,7 @@ async function openStepsModal(executionId) {
 
     document.getElementById('steps-title').innerText = `${e.flow_name} (${steps.length} steps)`;
     document.getElementById('steps-subtitle').innerText =
-      `Worker: ${e.worker_id} • ${e.status} • ${(e.duration_seconds || 0).toFixed(1)}s • ID: ${e.id}`;
+      `Worker: ${e.worker_id} • ${isPartial(e) ? 'สำเร็จบางส่วน: ' + partialText(e) : e.status} • ${(e.duration_seconds || 0).toFixed(1)}s • ID: ${e.id}`;
 
     if (steps.length === 0) {
       tbody.innerHTML = '<tr><td colspan="6" class="py-6 text-center text-slate-500">ไม่มีรายละเอียด step สำหรับการรันนี้</td></tr>';

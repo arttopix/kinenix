@@ -16,7 +16,7 @@ from rich.text import Text
 from .settings_file import hash_password, read_saved_settings, write_settings
 
 WORKER_STATUS_STYLES = {"online": "green", "busy": "yellow", "offline": "red"}
-EXECUTION_STATUS_STYLES = {"success": "green", "failed": "red", "running": "yellow"}
+EXECUTION_STATUS_STYLES = {"success": "green", "partial": "dark_orange", "failed": "red", "running": "yellow"}
 STEP_STATUS_STYLES = {"success": "green", "failed": "red", "skipped": "dim"}
 
 
@@ -228,6 +228,16 @@ def _styled(value: str, styles: Dict[str, str]) -> Text:
     return Text(value or "-", style=styles.get(value, ""))
 
 
+def partial_text(details: Any) -> str:
+    """What failed in a run that finished anyway: work items when the flow counts them, otherwise steps."""
+    details = details if isinstance(details, dict) else {}
+    total, failed = details.get("items_total"), details.get("items_failed")
+    if total and failed:
+        return f"{failed} of {total} items failed"
+    count = details.get("failure_count")
+    return f"{count} step(s) failed and the run went on" if count else "some steps failed and the run went on"
+
+
 def print_status(console: Console, base_url: str, data: Dict[str, Any], now: Optional[datetime] = None) -> None:
     workers = Table(title=f"Workers ({len(data['workers'])})", title_justify="left", title_style="bold")
     for column in ("Worker", "IP", "Status", "Task", "CPU", "RAM", "Last seen"):
@@ -251,6 +261,8 @@ def print_status(console: Console, base_url: str, data: Dict[str, Any], now: Opt
         failure = "-"
         if e.get("has_error"):
             failure = e.get("ai_summary") or e.get("error_message") or e.get("failed_step_name") or "failed"
+        elif e.get("status") == "partial":
+            failure = partial_text(e.get("details"))
         executions.add_row(
             Text(short_id(e.get("id")), style="dim"),
             _ago(e.get("created_at"), now),
@@ -258,7 +270,7 @@ def print_status(console: Console, base_url: str, data: Dict[str, Any], now: Opt
             Text(e.get("worker_id") or "-"),
             _styled(e.get("status"), EXECUTION_STATUS_STYLES),
             f"{e.get('duration_seconds') or 0:.1f}s",
-            Text(failure, style="red" if e.get("has_error") else ""),
+            Text(failure, style="red" if e.get("has_error") else ("dark_orange" if e.get("status") == "partial" else "")),
         )
 
     console.print(f"[bold]Kinenix Hub[/] [dim]{base_url}[/]")
@@ -326,6 +338,8 @@ def print_execution_log(console: Console, data: Dict[str, Any], now: Optional[da
     header.add_row("Flow", Text(e.get("flow_name") or "-"))
     header.add_row("Worker", Text(e.get("worker_id") or "-"))
     header.add_row("Status", _styled(e.get("status"), EXECUTION_STATUS_STYLES))
+    if e.get("status") == "partial":
+        header.add_row("", Text(partial_text(e.get("details")), style="dark_orange"))
     header.add_row("Started", f"{_local_time(e.get('start_time'))} ({_ago(e.get('created_at'), now)})")
     header.add_row("Duration", f"{e.get('duration_seconds') or 0:.1f}s")
     header.add_row("ID", e.get("id") or "-")

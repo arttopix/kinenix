@@ -55,6 +55,8 @@ New-NetFirewallRule -DisplayName "Kinenix Hub 8080" -Direction Inbound -Protocol
 
 ### Checking Status from the Command Line
 
+A run has one of three statuses, on the dashboard, in `kinenix hub status`, and in the run records: **success**; **partial** (สำเร็จบางส่วน, amber): the run finished, but work items or steps failed on the way and were handled by `on_error: continue` or `next_item`, shown with what failed, for example "1 จาก 2 รายการไม่สำเร็จ"; and **failed** (the run stopped). A run that ends with failed items is never shown as a plain success.
+
 The dashboard is optional. From a second terminal, `kinenix hub status` shows workers (status, current task, CPU, RAM, last heartbeat) and recent executions with failure summaries:
 
 ```powershell
