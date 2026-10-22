@@ -55,6 +55,8 @@ New-NetFirewallRule -DisplayName "Kinenix Hub 8080" -Direction Inbound -Protocol
 
 ### Checking Status from the Command Line
 
+A run has one of three statuses, on the dashboard, in `kinenix hub status`, and in the run records: **success**; **partial** (สำเร็จบางส่วน, amber): the run finished, but work items or steps failed on the way and were handled by `on_error: continue` or `next_item`, shown with what failed, for example "1 จาก 2 รายการไม่สำเร็จ"; and **failed** (the run stopped). A run that ends with failed items is never shown as a plain success.
+
 The dashboard is optional. From a second terminal, `kinenix hub status` shows workers (status, current task, CPU, RAM, last heartbeat) and recent executions with failure summaries:
 
 ```powershell
@@ -72,7 +74,7 @@ kinenix hub report 54f84bd6                          # report of one execution
 
 `report` prints the run report described in [hub_data.md](hub_data.md#run-report): items done and failed, each failure with its item, step, subflow, line, and how it was handled, and the On Error and Finally results. Like `query` ([section 7](#7-querying-runs)), it reads `hub.db` on the Hub machine without a running Hub, or a Hub on another machine with `--url`. `logs` and `status` always ask a running Hub.
 
-`logs` shows each step's name, action, status, duration, and error, plus the failure and AI summary of a failed run. The dashboard shows the same table from the "ดู Steps" button on each execution. Step output and flow variables are stored in the execution log but are not shown, because they can contain business data. Worker messages outside flow steps (heartbeat problems, service start) stay on the worker; on a Raspberry Pi service, read them with `journalctl -u kinenix-worker -f`.
+`logs` shows each step's name, action, status, duration, and error, plus the failure and AI summary of a failed run. For a failed step it shows the worker's diagnosis (what went wrong and how to fix it, for example a cookie banner covering a button) and the loop item it failed on, instead of the raw browser message; the dashboard shows the same, with the full message under "ข้อความเต็ม". The dashboard shows the same table from the "ดู Steps" button on each execution. Step output and flow variables are stored in the execution log but are not shown, because they can contain business data. Worker messages outside flow steps (heartbeat problems, service start) stay on the worker; on a Raspberry Pi service, read them with `journalctl -u kinenix-worker -f`.
 
 It reads `KINENIX_HUB_DASHBOARD_USER` and `KINENIX_HUB_DASHBOARD_PASSWORD` from the environment, so set them to the server's values when a dashboard password is configured ([section 3](#3-dashboard-authentication)).
 

@@ -93,3 +93,19 @@ def test_repository_flows_are_valid(path):
         if "steps" not in data:
             pytest.skip("not a flow definition")
     assert validate_flow(load_flow(path)) == []
+
+
+def test_every_action_declares_its_side_effects():
+    """docs/design/agent-interface.md, section 10: a run can be described and confirmed before it starts."""
+    from kinenix.actions.base import SIDE_EFFECT_KINDS
+    from kinenix.actions.registry import ActionRegistry
+
+    for name, action in ActionRegistry.list_actions().items():
+        if not action.__module__.startswith("kinenix.actions."):
+            continue  # actions that tests register
+        kinds = action.side_effects
+        assert kinds, f"{name} declares no side_effects"
+        assert set(kinds) <= set(SIDE_EFFECT_KINDS), f"{name}: unknown kind in {kinds}"
+        assert kinds == ("none",) or "none" not in kinds, f"{name}: 'none' cannot be combined with other kinds"
+    assert ActionRegistry.get("email.send").side_effects == ("email",)
+    assert ActionRegistry.get("web.get_table").side_effects == ("none",)

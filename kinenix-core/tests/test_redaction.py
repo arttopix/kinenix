@@ -191,3 +191,12 @@ def test_web_type_secret_parameter_and_plain_fields(monkeypatch):
     _, output, redactor = _type(monkeypatch, "text")
     assert output["text"] == "pa55word!"
     assert redactor.redact("echo pa55word!") == "echo pa55word!"
+
+
+def test_the_shell_working_directory_is_not_a_secret():
+    # #101: Linux and macOS shells set PWD to the working directory; "pwd" as a parameter name is still secret
+    redactor = Redactor({"PWD": "/home/somchai/kinenix", "OLDPWD": "/home/somchai", "SMTP_PASSWORD": "hunter22"})
+    data = {"log_path": "/home/somchai/kinenix/logs/run.jsonl", "error": "login with hunter22 failed",
+            "pwd": "abc12345"}
+    assert redactor.redact(data) == {"log_path": "/home/somchai/kinenix/logs/run.jsonl",
+                                     "error": "login with **** failed", "pwd": "****"}

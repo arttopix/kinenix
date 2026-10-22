@@ -15,6 +15,7 @@ Whenever a developer or AI assistant adds a new action or modifies an existing a
 
 2. **Parameter Validation & Typing:**
    - Declare every parameter name the action reads in `accepted_parameters` (use `LOCATOR_PARAMETERS + (...)` for actions that find an element). The flow validator and the tests depend on it: a test fails when an action has no declaration or when `docs/actions_reference.md` documents a parameter that is not declared.
+   - Declare `side_effects` with the kinds from `SIDE_EFFECT_KINDS` in `actions/base.py` (`email`, `files`, `web`, `network`, or `none` for an action that only reads or computes); a test fails when an action has none (`docs/design/agent-interface.md`, section 10).
    - Target architecture: a dedicated Pydantic model (`BaseModel`) per action with explicit types and defaults (see `AGENTS.md`, Current State vs. Target Architecture).
 
 3. **Mandatory Documentation Update:**

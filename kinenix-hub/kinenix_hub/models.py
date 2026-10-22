@@ -49,7 +49,7 @@ class Execution(Base):
     id = Column(String(64), primary_key=True, default=lambda: str(uuid.uuid4()))
     worker_id = Column(String(64), default="local-worker", index=True)
     flow_name = Column(String(128), nullable=False, index=True)
-    status = Column(String(32), default="success", index=True)  # success, failed, running
+    status = Column(String(32), default="success", index=True)  # success, partial, failed, running
     start_time = Column(DateTime, default=utc_now)
     end_time = Column(DateTime, nullable=True)
     duration_seconds = Column(Float, default=0.0)

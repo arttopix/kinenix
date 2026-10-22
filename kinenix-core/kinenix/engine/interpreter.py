@@ -12,6 +12,7 @@ from .evaluator import VariableEvaluator
 from .logger import ExecutionLogger
 from .markdown import JSON_FLOW_NOT_RUN, SECTION_HEADINGS, markdown_to_flow
 from .redaction import NOT_SECRET_ENV, Redactor
+from .web_errors import explain as explain_web_error
 from .requires import requirement_problem
 from .. import __version__
 from ..actions.registry import ActionRegistry
@@ -107,6 +108,10 @@ def resolve_subflow_path(flow_target: str, context: Any) -> Path:
     raise FileNotFoundError(f"Subflow file not found: '{flow_target}'")
 
 
+class _NextItem(Exception):
+    """on_error: next_item (#102): the failure is recorded, and the innermost logic.loop goes on with its next item."""
+
+
 class FlowInterpreter:
     """
     Interpreter that parses FlowDefinition, evaluates expressions, and executes steps sequentially.
@@ -147,7 +152,26 @@ class FlowInterpreter:
 
         if not self.auto_close_browser:
             return
+        self._close_browser(context)
 
+    _BROWSER_KEYS = ("__playwright_pw__", "__playwright_browser__", "__playwright_page__")
+
+    def _take_browser_back(self, context: ExecutionContext, child_context: ExecutionContext, shared: bool) -> None:
+        """
+        After a subflow (#58). A shared browser comes back as the subflow left it: the page it went to or
+        switched to (so screenshots and later steps see the right page), a browser it opened (so the run
+        closes it at the end), or nothing when it closed the browser. A subflow that does not share the
+        browser closes any browser it opened itself, so no browser process is left behind.
+        """
+        if shared:
+            for key in self._BROWSER_KEYS:
+                context.set_variable(key, child_context.get_variable(key))
+        elif self.auto_close_browser:
+            borrowed = child_context.get_variable("__playwright_pw__") is context.get_variable("__playwright_pw__")
+            self._close_browser(child_context, stop_playwright=not borrowed)
+
+    def _close_browser(self, context: ExecutionContext, stop_playwright: bool = True) -> None:
+        """Closes the browser and stops Playwright (unless it belongs to the caller), if this context holds them."""
         browser = context.get_variable("__playwright_browser__")
         pw = context.get_variable("__playwright_pw__")
 
@@ -163,7 +187,7 @@ class FlowInterpreter:
                 context.set_variable("__playwright_browser__", None)
                 context.set_variable("__playwright_page__", None)
 
-        if pw:
+        if pw and stop_playwright:
             try:
                 pw.stop()
                 self.logger.logger.info("Auto-cleanup: Stopped Playwright instance.")
@@ -228,8 +252,18 @@ class FlowInterpreter:
             root_cause = f"Business rule in step '{step.name}' was not met: {err_msg}"
             suggested_fix = "Check the input data of this item, or change the condition in flow.md if the rule itself is wrong."
         elif isinstance(exc, SubflowExecutionError):
-            root_cause = f"Subflow execution failed in '{exc.subflow_name}': {err_msg}"
-            suggested_fix = f"Inspect child subflow '{exc.subflow_name}' definition and input parameters passed in step '{step.id}'."
+            # The subflow's own diagnosis says what happened; repeat it with where (#111)
+            child_details = getattr(child, "failure_details", None)
+            if child_details is not None and child_details.root_cause:
+                root_cause = (f"In subflow '{exc.subflow_name}', step '{child_details.failed_step_name}': "
+                              f"{child_details.root_cause}")
+                suggested_fix = child_details.suggested_fix or ""
+            else:
+                root_cause = f"Subflow execution failed in '{exc.subflow_name}': {err_msg}"
+                suggested_fix = f"Inspect child subflow '{exc.subflow_name}' definition and input parameters passed in step '{step.id}'."
+        elif explain_web_error(err_msg) is not None:
+            # Known Playwright patterns: what blocked the click, what was not found, why the site failed (#111)
+            root_cause, suggested_fix = explain_web_error(err_msg)
         elif isinstance(exc, FileNotFoundError) or ("not found" in err_msg.lower() and "file" in err_msg.lower()):
             root_cause = f"Required file was not found during execution of step '{step.name}'."
             suggested_fix = "Verify the target file path exists and that relative paths are correctly anchored to the flow project directory."
@@ -602,9 +636,12 @@ class FlowInterpreter:
             context.set_variable("error", self._error_info(step, last_error, failure_diag, attempt, context))
 
         section = context.get_variable("__section__") or "steps"
+        on_error = str(handler.on_error).strip().lower() if handler else ""
         if handler and handler.fallback_step_id:
             handled = "fallback"
-        elif (handler and str(handler.on_error).strip().lower() == "continue") or section != "steps":
+        elif on_error == "next_item" and context.get_variable("__loop_depth__"):
+            handled = "next_item"  # outside a loop, next_item stops the run like fail (kinenix validate says so)
+        elif on_error == "continue" or section != "steps":
             handled = "continued"  # On Error and Finally go on with their next step
         else:
             handled = "stopped"
@@ -641,9 +678,6 @@ class FlowInterpreter:
         if handled == "stopped":
             context.set_variable("__stopping_result__", origin or result)
 
-        if context.failure_details is None:
-            context.failure_details = failure_diag
-
         if step.error_handler and step.error_handler.fallback_step_id:
             fallback_id = step.error_handler.fallback_step_id
             fallback_step = self._step_map.get(fallback_id)
@@ -658,8 +692,10 @@ class FlowInterpreter:
             self._execute_step(fallback_step, context)
             return
 
-        if handler and str(handler.on_error).strip().lower() == "continue":
+        if on_error == "continue":
             return
+        if handled == "next_item":
+            raise _NextItem(str(last_error)) from last_error
 
         # The failure that stops Steps is the run's failure, also after earlier failures that were continued
         if (context.get_variable("__section__") or "steps") == "steps":
@@ -677,6 +713,9 @@ class FlowInterpreter:
         loops = list(context.get_variable("__loops__") or [])
         location = list(context.get_variable("__location__") or [context.flow_name])
         context.set_variable("__location__", location + [step.name])
+        # Loops of this flow only: a subflow called inside a loop starts outside any loop of its own
+        depth = int(context.get_variable("__loop_depth__") or 0)
+        context.set_variable("__loop_depth__", depth + 1)
         # A loop with item_label works through items; the run counts them as done or failed
         counts = context.get_variable("__items__")
         counted = (step.parameters.get("item_label") not in (None, "") and isinstance(counts, dict)
@@ -697,6 +736,8 @@ class FlowInterpreter:
                         if context.get_variable("__early_exit__"):
                             break
                         self._execute_step(sub_step, context)
+                except _NextItem:
+                    pass  # the failure was recorded; the item counts as failed below
                 except Exception:
                     if counted:
                         counts["failed"] += 1
@@ -706,6 +747,7 @@ class FlowInterpreter:
         finally:
             context.set_variable("__loops__", loops)
             context.set_variable("__location__", location)
+            context.set_variable("__loop_depth__", depth)
 
         end_time = local_now()
         duration = (end_time - start_time).total_seconds()
@@ -954,6 +996,9 @@ class FlowInterpreter:
                 child_vars["__shared_browser__"] = True  # Safeguard signal
             if page:
                 child_vars["__playwright_page__"] = page
+        elif context.get_variable("__playwright_pw__"):
+            # Playwright allows one instance per thread: the subflow borrows it and opens its own browser
+            child_vars["__playwright_pw__"] = context.get_variable("__playwright_pw__")
 
         # 5. Spawn child interpreter with incremented call stack
         new_stack = list(self.call_stack) + [canonical_key]
@@ -965,6 +1010,7 @@ class FlowInterpreter:
         )
 
         child_context = child_interpreter.run_flow(subflow_def, initial_vars=child_vars)
+        self._take_browser_back(context, child_context, shared=evaluated_params.get("propagate_sessions", True))
         # The subflow's steps are part of this run's record, in the order they ran (#62)
         context.step_results.extend(child_context.step_results)
         context.set_variable("__failures__", self._failure_count(context) + self._failure_count(child_context))

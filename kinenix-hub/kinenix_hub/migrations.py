@@ -100,9 +100,17 @@ def _run_records(conn: Connection) -> None:
         store_run_records(conn, execution_id, build_run_records(payload, execution_run(row)))
 
 
+def _partial_status(conn: Connection) -> None:
+    """Runs that finished with failures on the way are partial, not success (#110)."""
+    conn.execute(text(
+        "UPDATE executions SET status = 'partial' WHERE status = 'success' "
+        "AND EXISTS (SELECT 1 FROM failures f WHERE f.execution_id = executions.id)"))
+
+
 MIGRATIONS: List[Migration] = [
     Migration(1, "baseline: workers and executions", _baseline),
     Migration(2, "run records: executions.details, step_results, failures", _run_records),
+    Migration(3, "status partial for runs that finished with failures", _partial_status),
 ]
 
 

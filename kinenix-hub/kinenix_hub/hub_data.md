@@ -19,7 +19,7 @@ A worker sends one execution log per run when the flow ends ([logging.md](loggin
 
 - Times are UTC, stored as text `YYYY-MM-DD HH:MM:SS.ffffff`, so they sort and compare as text: `failed_at >= datetime('now', '-1 day')`.
 - `section` is where a step is in `flow.md`: `steps`, `on_error` (`## On Error`), or `finally` (`## Finally`).
-- `handled` is what happened after a step failed: `stopped` (the run stopped; On Error ran), `continued` (`on_error: continue`, or a step in On Error or Finally), `fallback` (`fallback_step_id` ran).
+- `handled` is what happened after a step failed: `stopped` (the run stopped; On Error ran), `continued` (`on_error: continue`, or a step in On Error or Finally), `fallback` (`fallback_step_id` ran), `next_item` (`on_error: next_item`: the loop went on with its next item).
 - `details` columns are JSON with a version key `v`; the views expose their keys as columns. The views exist on SQLite only.
 
 ## Views
@@ -34,7 +34,7 @@ One row per run. Answers: how many runs, which failed, success rate and duration
 | `run_id` | Id of the run on the worker (`${run.id}`, also in log file names) | `20261012T020000-abcd` |
 | `flow_name` | Flow | `TIPH Quotes` |
 | `worker_id` | Worker that ran it | `rpi4` |
-| `status` | `success` or `failed` | `failed` |
+| `status` | `success`; `partial` (the run finished, but work items or steps failed and were handled by `on_error: continue` or `next_item`); or `failed` (the run stopped) | `partial` |
 | `started_at` | Start, UTC | `2026-10-11 19:00:00.000000` |
 | `ended_at` | End, UTC | `2026-10-11 19:14:00.000000` |
 | `duration_seconds` | Duration | `840.0` |
@@ -71,7 +71,7 @@ One row per failure. Answers: what failed, where, on which item, how it was hand
 | `loop_index` | Its position, from 1 | `7` |
 | `loop_of` | Number of items in that loop | `12` |
 | `retries` | Retries made before the step gave up | `2` |
-| `handled` | `stopped`, `continued`, or `fallback` | `continued` |
+| `handled` | `stopped`, `continued`, `fallback`, or `next_item` | `continued` |
 | `error_type` | `Technical` or `Business` | `Technical` |
 | `exception` | Exception class | `TimeoutError` |
 | `message` | Error message | `Timeout 30000ms exceeded waiting for option HONDA` |
@@ -121,7 +121,7 @@ One row per run, written when the worker sends the run.
 | `id` | Id of the run on the Hub | `53a58daa-...` |
 | `worker_id` | Worker | `rpi4` |
 | `flow_name` | Flow | `TIPH Quotes` |
-| `status` | `success` or `failed` | `failed` |
+| `status` | `success`; `partial` (the run finished, but work items or steps failed and were handled by `on_error: continue` or `next_item`); or `failed` (the run stopped) | `partial` |
 | `start_time` | Start, UTC | `2026-10-11 19:00:00.000000` |
 | `end_time` | End, UTC | `2026-10-11 19:14:00.000000` |
 | `duration_seconds` | Duration | `840.0` |
@@ -151,6 +151,7 @@ One row per run, written when the worker sends the run.
 | `items_total` | Work items | `12` |
 | `items_done` | Work items done | `6` |
 | `items_failed` | Work items failed | `1` |
+| `failure_count` | Failures recorded, also those the run went on after | `2` |
 | `report_md` | Run report | `# TIPH Quotes, ...` |
 
 ### `step_results`
@@ -200,7 +201,7 @@ One row per failure, also failures the flow continued after, so a run that succe
 | `step_name` | Step | `Choose Brand` |
 | `action` | Action | `web.click` |
 | `error_type` | `Technical` or `Business` | `Technical` |
-| `handled` | `stopped`, `continued`, or `fallback` | `continued` |
+| `handled` | `stopped`, `continued`, `fallback`, or `next_item` | `continued` |
 | `message` | Error message | `Timeout 30000ms exceeded` |
 | `details` | JSON, keys below | `{"v": 1, "exception": ...}` |
 

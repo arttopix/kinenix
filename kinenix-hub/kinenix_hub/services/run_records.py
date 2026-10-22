@@ -26,12 +26,14 @@ REPORT_MESSAGE_LIMIT = 200
 REPORT_FAILURES_LIMIT = 10
 
 # The keys each details column may hold; docs/hub_data.md documents each one, and a test keeps them in line
-EXECUTION_DETAILS_KEYS = ("v", "run_id", "kinenix_version", "items_total", "items_done", "items_failed", "report_md")
+EXECUTION_DETAILS_KEYS = ("v", "run_id", "kinenix_version", "items_total", "items_done", "items_failed",
+                          "failure_count", "report_md")
 STEP_DETAILS_KEYS = ("v", "line", "path", "subflow", "loop", "retries", "skipped_reason", "error", "output")
 FAILURE_DETAILS_KEYS = ("v", "step_id", "section", "exception", "root_cause", "suggested_fix", "path", "subflow",
                         "line", "loop", "retries", "screenshot", "on_error")
 
-HANDLED_WORDS = {"stopped": "run stopped", "continued": "continued", "fallback": "fallback ran"}
+HANDLED_WORDS = {"stopped": "run stopped", "continued": "continued", "fallback": "fallback ran",
+                 "next_item": "went on with the next item"}
 SECTION_TITLES = {"on_error": "On Error", "finally": "Finally"}
 
 
@@ -282,9 +284,26 @@ def build_run_records(payload: Dict[str, Any], run: Dict[str, Any]) -> RunRecord
         "items_total": _int(items.get("total")),
         "items_done": _int(items.get("done")),
         "items_failed": _int(items.get("failed")),
+        "failure_count": len(failure_rows),
         "report_md": run_report(payload, run, steps, failure_rows),
     })
     return RunRecords(details=details, steps=step_rows, failures=failure_rows)
+
+
+def run_status(payload: Dict[str, Any]) -> str:
+    """
+    failed: the run stopped. partial: it finished, but work items or steps failed on the way (handled by
+    on_error: continue or next_item). success: nothing failed (#110).
+    """
+    if payload.get("has_error"):
+        return "failed"
+    items = payload.get("items") if isinstance(payload.get("items"), dict) else {}
+    if (_int(items.get("failed")) or 0) > 0:
+        return "partial"
+    steps = payload.get("step_results") or []
+    if any(isinstance(s, dict) and s.get("status") == "failed" for s in steps):
+        return "partial"
+    return "success"
 
 
 def execution_run(execution: Any) -> Dict[str, Any]:

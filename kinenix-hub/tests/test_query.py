@@ -128,7 +128,7 @@ def test_catalog_and_describe_use_the_data_dictionary(conn):
     assert catalog["failures"]["rows"] >= 1
     described = hub_query.describe(conn, "v_failures")
     columns = {c["name"]: c for c in described["columns"]}
-    assert columns["handled"]["meaning"] == "stopped, continued, or fallback"
+    assert columns["handled"]["meaning"] == "stopped, continued, fallback, or next_item"
     assert columns["loop_item"]["example"] == "R007 HONDA HR-V"
     assert {k["name"] for k in hub_query.describe(conn, "failures")["details_keys"]} >= {"exception", "on_error"}
 

@@ -41,6 +41,7 @@ class FlowFailAction(BaseAction):
       - category: 'business' (default, not retried) or 'technical'.
     """
     accepted_parameters = ('message', 'category')
+    side_effects = ('none',)
 
     def execute(self, parameters: Dict[str, Any], context: ExecutionContext) -> Any:
         message = str(parameters.get("message") or "Flow stopped by flow.fail")
@@ -59,6 +60,7 @@ class FlowCallAction(BaseAction):
     Main execution logic is handled by FlowInterpreter._handle_flow_call_step.
     """
     accepted_parameters = ('flow', 'inputs', 'outputs', 'propagate_sessions', 'inherit_config')
+    side_effects = ('none',)
 
     def execute(self, parameters: Dict[str, Any], context: ExecutionContext) -> Any:
         return {"action": "flow.call"}
@@ -72,6 +74,7 @@ class FlowReturnAction(BaseAction):
       - value: Payload (dict, list, string, number, or primitive) to return to caller.
     """
     accepted_parameters = ('value',)
+    side_effects = ('none',)
 
     def execute(self, parameters: Dict[str, Any], context: ExecutionContext) -> Any:
         value = parameters.get("value")

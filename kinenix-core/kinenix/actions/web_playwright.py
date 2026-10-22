@@ -1,9 +1,11 @@
 import logging
 import os
+import re
+import time
 import subprocess
 import sys
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Callable, Dict, List, Optional
 from playwright.sync_api import sync_playwright, Browser, Page, Playwright
 
 from .base import LOCATOR_PARAMETERS, BaseAction
@@ -76,9 +78,23 @@ def _resolve_locator(page: Page, parameters: Dict[str, Any]):
         raise ValueError("Either 'selector' or 'label' parameter is required.")
 
 
+def _ensure_browser(context: ExecutionContext, headless: bool) -> Browser:
+    """The run's browser, started (with Playwright) when none is open yet."""
+    pw: Optional[Playwright] = context.get_variable("__playwright_pw__")
+    browser: Optional[Browser] = context.get_variable("__playwright_browser__")
+    if not pw:
+        pw = sync_playwright().start()
+        context.set_variable("__playwright_pw__", pw)
+    if not browser:
+        browser = _launch_browser_with_auto_install(pw, headless=headless)
+        context.set_variable("__playwright_browser__", browser)
+    return browser
+
+
 @register_action("web.open")
 class WebOpenAction(BaseAction):
     accepted_parameters = ('url', 'headless', 'timeout')
+    side_effects = ('web',)
 
     def execute(self, parameters: Dict[str, Any], context: ExecutionContext) -> Any:
         url = parameters.get("url")
@@ -90,17 +106,7 @@ class WebOpenAction(BaseAction):
         if "url" in parameters and not url:
             raise ValueError("web.open: 'url' is empty. Check that the variable it refers to (for example config.url) is set.")
 
-        pw: Optional[Playwright] = context.get_variable("__playwright_pw__")
-        browser: Optional[Browser] = context.get_variable("__playwright_browser__")
-
-        if not pw:
-            pw = sync_playwright().start()
-            context.set_variable("__playwright_pw__", pw)
-
-        if not browser:
-            browser = _launch_browser_with_auto_install(pw, headless=headless)
-            context.set_variable("__playwright_browser__", browser)
-
+        browser = _ensure_browser(context, headless)
         page = browser.new_page()
         page.set_default_timeout(timeout)
         context.set_variable("__playwright_page__", page)
@@ -111,9 +117,42 @@ class WebOpenAction(BaseAction):
         return {"url": url, "headless": headless, "status": "opened"}
 
 
+WAIT_UNTIL = ("load", "domcontentloaded", "networkidle", "commit")
+
+
+@register_action("web.goto")
+class WebGotoAction(BaseAction):
+    """
+    Goes to a URL in the current tab (#58). Unlike web.open, no new tab is opened, so a loop or a subflow
+    can return to a page without piling up tabs. Opens the browser and a tab first when none is open.
+    """
+    accepted_parameters = ('url', 'wait_until', 'timeout', 'headless')
+    side_effects = ('web',)
+
+    def execute(self, parameters: Dict[str, Any], context: ExecutionContext) -> Any:
+        url = parameters.get("url")
+        if not url:
+            raise ValueError("web.goto: 'url' is empty. Check that the variable it refers to (for example config.url) is set.")
+        wait_until = str(parameters.get("wait_until") or "load").strip().lower()
+        if wait_until not in WAIT_UNTIL:
+            raise ValueError(f"web.goto: wait_until '{wait_until}' is not one of {', '.join(WAIT_UNTIL)}.")
+        timeout = float(parameters.get("timeout", 30000))
+
+        page: Optional[Page] = context.get_variable("__playwright_page__")
+        if page is None or page.is_closed():
+            browser = _ensure_browser(context, bool(parameters.get("headless", False)))
+            page = browser.new_page()
+            page.set_default_timeout(timeout)
+            context.set_variable("__playwright_page__", page)
+
+        page.goto(str(url), wait_until=wait_until, timeout=timeout)
+        return {"url": page.url, "title": page.title(), "status": "navigated"}
+
+
 @register_action("web.click")
 class WebClickAction(BaseAction):
     accepted_parameters = LOCATOR_PARAMETERS + ('optional', 'timeout', 'wait_for_response', 'response_timeout')
+    side_effects = ('web',)
 
     def execute(self, parameters: Dict[str, Any], context: ExecutionContext) -> Any:
         page = _get_page(context)
@@ -144,6 +183,7 @@ class WebClickAction(BaseAction):
 @register_action("web.type")
 class WebTypeAction(BaseAction):
     accepted_parameters = LOCATOR_PARAMETERS + ('text', 'secret')
+    side_effects = ('web',)
 
     def execute(self, parameters: Dict[str, Any], context: ExecutionContext) -> Any:
         page = _get_page(context)
@@ -166,6 +206,7 @@ class WebTypeAction(BaseAction):
 @register_action("web.get_text")
 class WebGetTextAction(BaseAction):
     accepted_parameters = LOCATOR_PARAMETERS
+    side_effects = ('none',)
 
     def execute(self, parameters: Dict[str, Any], context: ExecutionContext) -> Any:
         page = _get_page(context)
@@ -195,10 +236,62 @@ table => {
 """
 
 
+PAGING_PARAMETERS = ('next_selector', 'max_pages')
+DEFAULT_MAX_PAGES = 20
+
+_IS_DISABLED_JS = """
+el => {
+    const off = e => !!e && (e.disabled === true || e.getAttribute('aria-disabled') === 'true'
+        || e.classList.contains('disabled') || e.classList.contains('is-disabled'));
+    return off(el) || off(el.parentElement) || off(el.parentElement && el.parentElement.parentElement);
+}
+"""
+
+
+def _next_is_available(page: Page, next_selector: str) -> bool:
+    """The "next page" control exists, is visible, and is not disabled (attribute, aria, or a disabled class
+    on it or on its parents, as DataTables and Bootstrap pagination do)."""
+    control = page.locator(next_selector).first
+    if control.count() == 0 or not control.is_visible():
+        return False
+    return not control.evaluate(_IS_DISABLED_JS)
+
+
+def _read_pages(page: Page, parameters: Dict[str, Any], action: str,
+                read: Callable[[], List[Any]], signature: Callable[[], str]) -> List[Any]:
+    """
+    Reads one page, then follows `next_selector` until it is gone or disabled, waiting each time until the
+    content has really changed. More pages than `max_pages` is an error, never a silent cut.
+    """
+    rows = list(read())
+    next_selector = parameters.get("next_selector")
+    if not next_selector:
+        return rows
+    max_pages = int(parameters.get("max_pages", DEFAULT_MAX_PAGES))
+    timeout = float(parameters.get("timeout", 30000))
+    pages = 1
+    while _next_is_available(page, next_selector):
+        if pages >= max_pages:
+            raise ValueError(f"{action}: there are more than max_pages ({max_pages}) pages; "
+                             f"raise max_pages to read them all, so that no page is left out without notice.")
+        before = signature()
+        page.locator(next_selector).first.click()
+        deadline = time.monotonic() + timeout / 1000
+        while signature() == before:
+            if time.monotonic() > deadline:
+                raise TimeoutError(f"{action}: the content did not change within {timeout:.0f} ms after clicking "
+                                   f"'{next_selector}' (page {pages + 1}).")
+            page.wait_for_timeout(100)
+        rows.extend(read())
+        pages += 1
+    return rows
+
+
 @register_action("web.get_table")
 class WebGetTableAction(BaseAction):
-    """Reads an HTML <table> into a list of row dicts keyed by the header cells."""
-    accepted_parameters = LOCATOR_PARAMETERS + ('columns', 'numeric_columns', 'add_columns', 'min_rows', 'timeout')
+    """Reads an HTML <table> into a list of row dicts keyed by the header cells, following its pages when asked."""
+    accepted_parameters = LOCATOR_PARAMETERS + ('columns', 'numeric_columns', 'add_columns', 'min_rows', 'timeout') + PAGING_PARAMETERS
+    side_effects = ('none',)
 
     def execute(self, parameters: Dict[str, Any], context: ExecutionContext) -> Any:
         page = _get_page(context)
@@ -209,9 +302,14 @@ class WebGetTableAction(BaseAction):
         min_rows = int(parameters.get("min_rows", 0))
 
         locator.wait_for(state="attached", timeout=timeout)
-        table = locator.evaluate(_TABLE_TO_ROWS_JS)
-        headers = table["headers"]
-        rows = [dict(zip(headers, cells)) for cells in table["data"]]
+        headers: List[str] = []
+
+        def read_page() -> List[Dict[str, Any]]:
+            table = locator.evaluate(_TABLE_TO_ROWS_JS)
+            headers[:] = table["headers"]
+            return [dict(zip(table["headers"], cells)) for cells in table["data"]]
+
+        rows = _read_pages(page, parameters, "web.get_table", read_page, lambda: locator.inner_text())
 
         # columns: a list keeps those columns in that order; a dict also renames {source: target}
         if columns:
@@ -247,9 +345,152 @@ class WebGetTableAction(BaseAction):
         return rows
 
 
+_FIELD_ATTRIBUTE = re.compile(r"^(?P<selector>.*?)@(?P<attribute>[\w-]+)$")
+
+
+def _clean(text: Optional[str]) -> str:
+    return " ".join((text or "").split())
+
+
+@register_action("web.get_list")
+class WebGetListAction(BaseAction):
+    """
+    Reads repeated elements, such as product cards or search results, into a list of rows (#55): one row per
+    element matching `selector`, one value per field, each field found inside that element.
+    """
+    accepted_parameters = ('selector', 'fields', 'numeric_fields', 'required_fields', 'add_columns', 'min_rows',
+                           'timeout') + PAGING_PARAMETERS
+    side_effects = ('none',)
+
+    def execute(self, parameters: Dict[str, Any], context: ExecutionContext) -> Any:
+        page = _get_page(context)
+        selector = parameters.get("selector")
+        if not selector:
+            raise ValueError("web.get_list: 'selector' (the repeated element, such as a card) is required.")
+        fields = parameters.get("fields")
+        if not isinstance(fields, dict) or not fields:
+            raise ValueError('web.get_list: \'fields\' must map column names to selectors inside each element, '
+                             'for example {"name": "h3", "price": ".price", "link": "a@href"}.')
+        numeric = list(parameters.get("numeric_fields") or [])
+        required = list(parameters.get("required_fields") or [])
+        unknown = [name for name in numeric + required if name not in fields]
+        if unknown:
+            raise ValueError(f"web.get_list: {unknown} are not in fields ({', '.join(fields)}).")
+        add_columns = parameters.get("add_columns") or {}
+        if not isinstance(add_columns, dict):
+            raise ValueError("web.get_list: 'add_columns' must be a mapping of column name to value.")
+        min_rows = int(parameters.get("min_rows", 0))
+        timeout = float(parameters.get("timeout", 30000))
+
+        items = page.locator(selector)
+        try:
+            items.first.wait_for(state="attached", timeout=timeout)
+        except Exception:
+            if min_rows > 0:
+                raise ValueError(f"web.get_list: no element matches '{selector}' within {timeout:.0f} ms.")
+
+        def read_field(item, spec: str) -> str:
+            match = _FIELD_ATTRIBUTE.match(spec or "")
+            inner, attribute = (match.group("selector").strip(), match.group("attribute")) if match else ((spec or "").strip(), None)
+            target = item if inner in ("", ".") else item.locator(inner).first
+            if target is not item and target.count() == 0:
+                return ""
+            if attribute:
+                return _clean(target.get_attribute(attribute))
+            return _clean(target.inner_text())
+
+        def read_page() -> List[Dict[str, Any]]:
+            rows = []
+            for index in range(items.count()):
+                item = items.nth(index)
+                rows.append({name: read_field(item, spec) for name, spec in fields.items()})
+            return rows
+
+        rows = _read_pages(page, parameters, "web.get_list", read_page, lambda: "\n".join(items.all_inner_texts()))
+
+        from ..engine.expressions import parse_number
+        for number, row in enumerate(rows, start=1):
+            for name in required:
+                if row[name] == "":
+                    raise ValueError(f"web.get_list: item {number} has no '{name}' (selector '{fields[name]}'); "
+                                     f"the item reads {row}.")
+            # Blank and "-" become None, as in web.get_table; text with no number in it is an error
+            for name in numeric:
+                try:
+                    row[name] = parse_number(row[name]) if row[name] not in ("", "-") else None
+                except ValueError as e:
+                    raise ValueError(f"web.get_list: item {number}, field '{name}': {e}") from None
+        if add_columns:
+            rows = [{**add_columns, **row} for row in rows]
+        if len(rows) < min_rows:
+            raise ValueError(f"web.get_list: expected at least {min_rows} item(s) matching '{selector}', found {len(rows)}.")
+        return rows
+
+
+_CHOOSE_SEARCH_INPUTS = "[cmdk-input], input[role=combobox], [role=combobox] input, input[type=search], [role=dialog] input, [role=listbox] input"
+# Options of the open dropdown, not the <option> elements of native selects elsewhere on the page
+_OUTSIDE_NATIVE_SELECT = "xpath=//*[not(ancestor::select)]"
+
+
+@register_action("web.choose")
+class WebChooseAction(BaseAction):
+    """
+    Picks an option in a dropdown (#57): a custom one (Radix/shadcn Select, cmdk combobox, Headless UI, MUI),
+    by clicking the trigger, optionally typing into its search box, and clicking the option with that name;
+    or a native <select>. When the option is missing, the error lists the options that are there.
+    """
+    accepted_parameters = LOCATOR_PARAMETERS + ('option', 'search', 'search_selector', 'exact', 'timeout')
+    side_effects = ('web',)
+
+    def execute(self, parameters: Dict[str, Any], context: ExecutionContext) -> Any:
+        page = _get_page(context)
+        option = parameters.get("option")
+        if option is None or str(option).strip() == "":
+            raise ValueError("web.choose: 'option' is empty. Check the value or the variable it refers to.")
+        option = str(option).strip()
+        exact = str(parameters.get("exact", True)).strip().lower() not in ("false", "0", "no")
+        search = str(parameters.get("search", False)).strip().lower() in ("true", "1", "yes")
+        timeout = float(parameters.get("timeout", 10000))
+
+        trigger = _resolve_locator(page, parameters).first
+        trigger.wait_for(state="visible", timeout=timeout)
+
+        if trigger.evaluate("el => el.tagName.toLowerCase()") == "select":
+            labels = [_clean(t) for t in trigger.locator("option").all_inner_texts()]
+            chosen = next((l for l in labels if l == option), None) if exact else \
+                next((l for l in labels if option.lower() in l.lower()), None)
+            if chosen is None:
+                raise ValueError(f"web.choose: option '{option}' not found; available: {', '.join(labels[:30])}")
+            trigger.select_option(label=chosen)
+            return {"option": chosen, "status": "chosen"}
+
+        trigger.click()
+        if search:
+            box_selector = parameters.get("search_selector")
+            box = page.locator(box_selector).first if box_selector else page.locator(_CHOOSE_SEARCH_INPUTS).first
+            box.wait_for(state="visible", timeout=timeout)
+            box.fill(option)
+
+        name = option if exact else re.compile(re.escape(option), re.IGNORECASE)
+        outside = page.locator(_OUTSIDE_NATIVE_SELECT)
+        candidates = page.get_by_role("option", name=name, exact=exact).and_(outside)
+        try:
+            candidates.first.wait_for(state="visible", timeout=timeout)
+        except Exception:
+            visible = [_clean(t) for t in page.get_by_role("option").and_(outside).all_inner_texts() if _clean(t)]
+            if not visible:
+                raise ValueError(f"web.choose: no options appeared after clicking the dropdown; check the selector "
+                                 f"of the trigger, or set search: true if the list needs typing first.") from None
+            raise ValueError(f"web.choose: option '{option}' not found; available: {', '.join(visible[:30])}") from None
+        chosen = _clean(candidates.first.inner_text())
+        candidates.first.click()
+        return {"option": chosen, "status": "chosen"}
+
+
 @register_action("web.screenshot")
 class WebScreenshotAction(BaseAction):
     accepted_parameters = ('path', 'full_page')
+    side_effects = ('files',)
 
     def execute(self, parameters: Dict[str, Any], context: ExecutionContext) -> Any:
         page = _get_page(context)
@@ -270,6 +511,7 @@ class WebScreenshotAction(BaseAction):
 @register_action("web.download")
 class WebDownloadAction(BaseAction):
     accepted_parameters = LOCATOR_PARAMETERS + ('target_path', 'timeout')
+    side_effects = ('web', 'files')
 
     def execute(self, parameters: Dict[str, Any], context: ExecutionContext) -> Any:
         page = _get_page(context)
@@ -318,6 +560,7 @@ class WebDownloadAction(BaseAction):
 @register_action("web.close")
 class WebCloseAction(BaseAction):
     accepted_parameters = ()
+    side_effects = ('none',)
 
     def execute(self, parameters: Dict[str, Any], context: ExecutionContext) -> Any:
         if context.get_variable("__shared_browser__"):
@@ -345,6 +588,7 @@ class WebCloseAction(BaseAction):
 @register_action("web.wait_for")
 class WebWaitForAction(BaseAction):
     accepted_parameters = LOCATOR_PARAMETERS + ('state', 'timeout')
+    side_effects = ('none',)
 
     def execute(self, parameters: Dict[str, Any], context: ExecutionContext) -> Any:
         page = _get_page(context)
@@ -365,6 +609,7 @@ class WebWaitForAction(BaseAction):
 @register_action("web.is_visible")
 class WebIsVisibleAction(BaseAction):
     accepted_parameters = LOCATOR_PARAMETERS + ('timeout',)
+    side_effects = ('none',)
 
     def execute(self, parameters: Dict[str, Any], context: ExecutionContext) -> Any:
         page = _get_page(context)
@@ -382,6 +627,7 @@ class WebIsVisibleAction(BaseAction):
 @register_action("web.get_attribute")
 class WebGetAttributeAction(BaseAction):
     accepted_parameters = LOCATOR_PARAMETERS + ('attribute', 'name')
+    side_effects = ('none',)
 
     def execute(self, parameters: Dict[str, Any], context: ExecutionContext) -> Any:
         page = _get_page(context)
@@ -397,6 +643,7 @@ class WebGetAttributeAction(BaseAction):
 @register_action("web.press")
 class WebPressAction(BaseAction):
     accepted_parameters = LOCATOR_PARAMETERS + ('key',)
+    side_effects = ('web',)
 
     def execute(self, parameters: Dict[str, Any], context: ExecutionContext) -> Any:
         page = _get_page(context)
@@ -419,6 +666,7 @@ class WebPressAction(BaseAction):
 @register_action("web.scroll")
 class WebScrollAction(BaseAction):
     accepted_parameters = LOCATOR_PARAMETERS + ('direction', 'amount')
+    side_effects = ('none',)
 
     def execute(self, parameters: Dict[str, Any], context: ExecutionContext) -> Any:
         page = _get_page(context)
@@ -448,6 +696,7 @@ class WebScrollAction(BaseAction):
 @register_action("web.hover")
 class WebHoverAction(BaseAction):
     accepted_parameters = LOCATOR_PARAMETERS + ('timeout',)
+    side_effects = ('none',)
 
     def execute(self, parameters: Dict[str, Any], context: ExecutionContext) -> Any:
         page = _get_page(context)
@@ -460,6 +709,7 @@ class WebHoverAction(BaseAction):
 @register_action("web.switch_tab")
 class WebSwitchTabAction(BaseAction):
     accepted_parameters = ('index', 'title', 'url_pattern')
+    side_effects = ('none',)
 
     def execute(self, parameters: Dict[str, Any], context: ExecutionContext) -> Any:
         browser: Optional[Browser] = context.get_variable("__playwright_browser__")
@@ -512,6 +762,7 @@ class WebSwitchTabAction(BaseAction):
 @register_action("web.select_option")
 class WebSelectOptionAction(BaseAction):
     accepted_parameters = LOCATOR_PARAMETERS + ('value', 'text', 'label_text', 'index', 'ai_match', 'base_url', 'systemone_url', 'fallback_to_ollama', 'timeout')
+    side_effects = ('web',)
 
     def execute(self, parameters: Dict[str, Any], context: ExecutionContext) -> Any:
         page = _get_page(context)
@@ -622,6 +873,7 @@ class WebSelectOptionAction(BaseAction):
 @register_action("web.upload_file")
 class WebUploadFileAction(BaseAction):
     accepted_parameters = LOCATOR_PARAMETERS + ('file_path', 'path')
+    side_effects = ('web',)
 
     def execute(self, parameters: Dict[str, Any], context: ExecutionContext) -> Any:
         page = _get_page(context)
@@ -651,6 +903,7 @@ class WebUploadFileAction(BaseAction):
 @register_action("web.check")
 class WebCheckAction(BaseAction):
     accepted_parameters = LOCATOR_PARAMETERS + ('timeout',)
+    side_effects = ('web',)
 
     def execute(self, parameters: Dict[str, Any], context: ExecutionContext) -> Any:
         page = _get_page(context)
@@ -663,6 +916,7 @@ class WebCheckAction(BaseAction):
 @register_action("web.uncheck")
 class WebUncheckAction(BaseAction):
     accepted_parameters = LOCATOR_PARAMETERS + ('timeout',)
+    side_effects = ('web',)
 
     def execute(self, parameters: Dict[str, Any], context: ExecutionContext) -> Any:
         page = _get_page(context)

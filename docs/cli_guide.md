@@ -102,7 +102,7 @@ kinenix actions web      # only web.*
 ```
 
 ### 2.6 List Available Flows (`list`)
-Scans the current folder, your flows folder (`kinenix flows-dir`), and a repository's `flows/` and `examples/` folders, and lists every runnable flow and project bundle:
+Scans the current folder, your flows folder (`kinenix flows-dir`), and a repository's `flows/` and `examples/` folders, and lists every project bundle (a folder with a `flow.md`) by its folder name. A single `.md` file is not listed; run it by its path:
 
 ```powershell
 kinenix list
@@ -180,9 +180,9 @@ When running `kinenix run <input>`, the resolver searches candidate paths in the
 
 1. **Exact File Path:** Resolves directly if `<input>` is an existing file path.
 2. **Project Bundle Directory:** If `<input>` is a directory containing `flow.md`, executes `<input>/flow.md`.
-3. **Appended `.json`:** Checks if `<input>.json` exists.
-4. **Discovered Flow Alias:** Matches aliases discovered by `kinenix list`.
-5. **Project Search Directories:** Searches candidate subdirectories (`flows/`, `examples/`, `~/.kinenix/flows/`).
+3. **Appended `.md`:** Checks if `<input>.md` exists.
+4. **Discovered Flow Alias:** Matches the folder names listed by `kinenix list`.
+5. **Search Directories:** Looks for `<input>/flow.md` in the current folder, your flows folder (`kinenix flows-dir`), and `flows/` and `examples/`.
 
 ---
 

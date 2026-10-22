@@ -116,3 +116,27 @@ def test_hub_database_runs_in_wal_mode():
         assert conn.execute(text("PRAGMA journal_mode")).scalar() == "wal"
         assert conn.execute(text("PRAGMA busy_timeout")).scalar() == 5000
     assert current_version(database.engine) == MIGRATIONS[-1].number
+
+
+def test_runs_that_finished_with_failures_become_partial(tmp_path):
+    # #110: before migration 3, a run whose failures were continued was stored as success
+    engine = _legacy_hub_db(tmp_path / "hub.db")
+    continued = {
+        "flow_name": "TIPH", "has_error": False, "items": {"total": 2, "done": 1, "failed": 1},
+        "step_results": [
+            {"step_id": "s1", "step_name": "Choose", "action": "web.click", "status": "failed", "duration_seconds": 1.0,
+             "error_message": "Timeout", "failure": {"handled": "continued", "from_subflow": False}},
+        ],
+    }
+    clean = {"flow_name": "Hello", "has_error": False,
+             "step_results": [{"step_id": "s1", "step_name": "Greet", "action": "logic.delay", "status": "success"}]}
+    with engine.begin() as conn:
+        for run_id, log in (("run-3", continued), ("run-4", clean)):
+            conn.execute(text("INSERT INTO executions (id, worker_id, flow_name, status, has_error, raw_log)"
+                              " VALUES (:id, 'rpi4', 'TIPH', 'success', 0, :log)"), {"id": run_id, "log": json.dumps(log)})
+
+    run_migrations(engine)
+
+    with engine.connect() as conn:
+        status = dict(conn.execute(text("SELECT id, status FROM executions")).all())
+    assert status == {"run-1": "failed", "run-3": "partial", "run-4": "success"}

@@ -36,6 +36,16 @@ def test_banner_shows_worker_url_and_auth_state(monkeypatch):
     assert "http://0.0.0.0" not in out
 
 
+def test_the_dashboard_url_works_from_other_machines_when_they_may_log_in(monkeypatch):
+    # Over ssh, http://127.0.0.1 opened the viewer's own machine, not the Hub
+    monkeypatch.setattr(hub_console, "lan_ip", lambda: "192.168.1.137")
+    console = _console()
+    hub_console.print_banner(console, "0.0.0.0", 8080, "http://127.0.0.1:8000/v1/systemone",
+                              api_key_set=True, dashboard_password_set=True)
+    dashboard = [line for line in console.export_text().splitlines() if "Dashboard " in line][0]
+    assert "http://192.168.1.137:8080  (on this machine: http://127.0.0.1:8080)" in dashboard
+
+
 def test_bind_url_log_line_is_hidden():
     import logging
     hide = hub_console._HideBindUrl()

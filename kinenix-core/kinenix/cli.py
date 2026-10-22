@@ -64,7 +64,6 @@ def _get_search_directories() -> List[Path]:
         flows_dir(),  # the user's flows folder (KINENIX_FLOWS_DIR, saved setting, or ~/kinenix-flows)
         Path.cwd() / "flows",
         Path.cwd() / "examples",
-        Path(__file__).parent.parent / "examples",
         Path.home() / ".kinenix" / "flows",
     ]
     root = _get_project_root()
@@ -83,8 +82,8 @@ def _get_search_directories() -> List[Path]:
 
 def discover_flows() -> Dict[str, Tuple[Path, str]]:
     """
-    Discovers flows across search directories: bundles with a flow.md, and flat *_flow.md files.
-    Returns dict mapping flow alias/name to (file_path, description).
+    Discovers flows across search directories: bundles, that is folders with a flow.md (#108).
+    A single .md file is not listed; it runs by its path. Returns dict mapping alias to (file_path, name).
     """
     discovered: Dict[str, Tuple[Path, str]] = {}
 
@@ -108,28 +107,13 @@ def discover_flows() -> Dict[str, Tuple[Path, str]]:
                 try:
                     rel = flow_file.parent.relative_to(search_dir)
                     rel_str = str(rel).replace("\\", "/")
-                    if rel_str and rel_str != alias and rel_str not in discovered:
+                    # The bundle is the search directory itself (the current folder): "." is not a name
+                    if rel_str not in ("", ".") and rel_str != alias and rel_str not in discovered:
                         discovered[rel_str] = (flow_file, name)
                 except ValueError:
                     pass
             except Exception:
                 continue
-
-        # 2. Discover flat flow files (*_flow.md, or .md files directly in examples/ or flows/)
-        for candidate_file in search_dir.glob("*.md"):
-            if candidate_file.name in ["flow.md", "README.md"]:
-                continue
-            if candidate_file.name.endswith("_flow.md") or candidate_file.parent.name in ["examples", "flows"]:
-                try:
-                    flow_def = load_flow(candidate_file)
-                    name = flow_def.name or candidate_file.stem
-                    alias = candidate_file.stem
-                    if alias.endswith("_flow"):
-                        alias = alias[:-5]
-                    if alias not in discovered:
-                        discovered[alias] = (candidate_file, name)
-                except Exception:
-                    continue
     return discovered
 
 
@@ -160,16 +144,12 @@ def resolve_flow_path(flow_input: str) -> Optional[Path]:
     if flow_input in flows:
         return flows[flow_input][0].resolve()
 
-    if f"{flow_input}_flow" in flows:
-        return flows[f"{flow_input}_flow"][0].resolve()
-
     # 5. Search directories for project bundles or files
     for search_dir in _get_search_directories():
         candidates = [
             search_dir / flow_input / "flow.md",
             search_dir / flow_input,
             search_dir / f"{flow_input}.md",
-            search_dir / f"{flow_input}_flow.md",
         ]
         for c in candidates:
             if c.is_file():
@@ -384,11 +364,15 @@ def main():
             print(f"No action starts with '{args.filter}'.", file=sys.stderr)
             sys.exit(1)
         width = max(len(n) for n in names) + 2
-        print("Actions and the parameters they accept (details: docs/actions_reference.md)\n")
+        print("Actions and the parameters they accept (details: docs/actions_reference.md)")
+        print("[...] is what the action can do outside the run: email, files, web, network\n")
         for name in names:
-            params = ActionRegistry.get(name).accepted_parameters
+            action = ActionRegistry.get(name)
+            params = action.accepted_parameters
             listed = ", ".join(params) if params else "(none)"
-            print(f"  {name:<{width}}{listed}")
+            effects = [kind for kind in (action.side_effects or ()) if kind != "none"]
+            marker = f"  [{', '.join(effects)}]" if effects else ""
+            print(f"  {name:<{width}}{listed}{marker}")
         print("\nEvery step also accepts: description, output_var, condition, on_error, max_retries, retry_interval, fallback_step_id")
         sys.exit(0)
 
@@ -453,7 +437,7 @@ def main():
     elif args.command == "list":
         flows = discover_flows()
         if not flows:
-            print("No flows found in current directory, 'flows/', 'examples/', or ~/.kinenix/flows/.")
+            print(f"No flows found in the flows folder ({flows_dir()}) or the current directory.")
             print("Tip: You can specify the path of a bundle folder or flow.md: kinenix run <path>")
             sys.exit(0)
 

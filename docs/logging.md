@@ -110,7 +110,9 @@ Every step result records where it ran and what happened:
 | `subflow` | Name of the subflow the step ran in, or `null` in the main flow |
 | `loop` | The innermost loop item: `{"index": 2, "of": 12, "item": "R002 HONDA"}` (`item` from `item_label`) |
 | `retries` | Retries made before the step succeeded or failed |
-| `failure` | For a failed step: `exception`, `root_cause`, `suggested_fix`, `screenshot`, `handled` (`stopped`, `continued`, `fallback`), and `from_subflow` (true on a `flow.call` step whose subflow failed; the failure itself is recorded on the subflow's step) |
+| `failure` | For a failed step: `exception`, `root_cause`, `suggested_fix`, `screenshot`, `handled` (`stopped`, `continued`, `fallback`, `next_item`), and `from_subflow` (true on a `flow.call` step whose subflow failed; the failure itself is recorded on the subflow's step) |
+
+`root_cause` and `suggested_fix` are rule-based, on the worker, without AI. For web actions, Playwright's fixed message patterns are turned into one sentence: what covered the element a click was meant for (and whether it looks like a cookie banner, a popup, or a menu), a selector that never appeared or matches several elements, a site that could not be reached. A failed subflow repeats its own step's diagnosis with where it happened. An unknown message keeps a general wording; the full message is always in `error_message`.
 
 `items` counts work items: the iterations of loops that have an `item_label`, as `{"total": 12, "done": 10, "failed": 1}`; the rest were not reached. A loop without `item_label` is not counted, so loops that only tick options do not inflate the numbers. `items` is `null` when the flow has no such loop.
 
@@ -128,7 +130,7 @@ The worker removes secrets and personal data before anything leaves the run: the
 | What | How it is found | Replaced by |
 | :--- | :--- | :--- |
 | Values from the bundle's `.env`, and of every `${env.NAME}` the flow uses | Exact value (4 characters or longer), wherever it appears | `****` |
-| Environment variables whose name looks secret (`SMTP_PASSWORD`, `KINENIX_HUB_API_KEY`, ...), and the Hub key saved by `kinenix connect` | Exact value | `****` |
+| Environment variables whose name looks secret (`SMTP_PASSWORD`, `KINENIX_HUB_API_KEY`, ...), and the Hub key saved by `kinenix connect`. `PWD` and `OLDPWD`, which Linux and macOS shells set to the working directory, are not secret | Exact value | `****` |
 | Values of keys that look secret: names containing `password`, `passwd`, `secret`, `token`, `api_key`, `authorization`, `private_key`, or named exactly `pwd`, `cookie(s)`, `set-cookie`, `credential(s)` | Key name, at any depth; the value is also hidden where it appears in other text | `****` |
 | `password=...`, `token: ...`, `Authorization: Bearer ...` inside text (URLs, error messages) | Pattern | `****` after the key |
 | Text typed by `web.type` into a `type="password"` field, or with `secret: true` | The action | `****` |

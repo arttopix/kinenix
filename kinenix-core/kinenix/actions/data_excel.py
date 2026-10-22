@@ -76,6 +76,7 @@ def _decode_error(path: Path, encoding: str) -> ValueError:
 @register_action("excel.read")
 class ExcelReadAction(BaseAction):
     accepted_parameters = ('file_path', 'sheet_name', 'clean_headers', 'as_text')
+    side_effects = ('none',)
 
     def execute(self, parameters: Dict[str, Any], context: ExecutionContext) -> Any:
         file_path = parameters.get("file_path")
@@ -118,6 +119,7 @@ class ExcelReadAction(BaseAction):
 @register_action("excel.write")
 class ExcelWriteAction(BaseAction):
     accepted_parameters = ('file_path', 'data', 'sheet_name', 'columns')
+    side_effects = ('files',)
 
     def execute(self, parameters: Dict[str, Any], context: ExecutionContext) -> Any:
         file_path = parameters.get("file_path")
@@ -156,6 +158,7 @@ class ExcelWriteAction(BaseAction):
 @register_action("csv.write")
 class CsvWriteAction(BaseAction):
     accepted_parameters = ('file_path', 'data', 'columns', 'encoding', 'append')
+    side_effects = ('files',)
 
     def execute(self, parameters: Dict[str, Any], context: ExecutionContext) -> Any:
         file_path = parameters.get("file_path")
@@ -216,6 +219,7 @@ class CsvWriteAction(BaseAction):
 @register_action("csv.read")
 class CsvReadAction(BaseAction):
     accepted_parameters = ('file_path', 'delimiter', 'encoding', 'clean_headers', 'as_text')
+    side_effects = ('none',)
 
     def execute(self, parameters: Dict[str, Any], context: ExecutionContext) -> Any:
         file_path = parameters.get("file_path")

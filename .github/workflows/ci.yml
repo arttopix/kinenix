@@ -44,6 +44,11 @@ jobs:
           -e "kinenix-studio[dev]"
           -e "kinenix-hub[dev]"
 
+      # Tests that use the chromium fixture drive a real browser against local pages; with CI=true they
+      # fail instead of skipping when Chromium is missing (kinenix-core/tests/conftest.py)
+      - name: Install Chromium for the browser tests
+        run: python -m playwright install ${{ runner.os == 'Linux' && '--with-deps' || '' }} chromium
+
       # kinenix-core tests run from their own directory, the others from the repository root
       - name: Test kinenix-core
         working-directory: kinenix-core
