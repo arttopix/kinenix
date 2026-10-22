@@ -60,7 +60,11 @@ def print_banner(console: Console, host: str, port: int, llm_url: str, api_key_s
     grid.add_column(overflow="fold")
 
     urls = browser_urls(host, port)
-    grid.add_row("Dashboard", urls[0])
+    if len(urls) > 1 and dashboard_password_set:
+        # Seen over ssh, 127.0.0.1 opens the viewer's own machine; the LAN address works from every machine
+        grid.add_row("Dashboard", Text(urls[1]) + Text(f"  (on this machine: {urls[0]})", style="dim"))
+    else:
+        grid.add_row("Dashboard", urls[0])
     if len(urls) > 1:
         grid.add_row("Worker URL", Text(urls[1], style="bold"))
     grid.add_row("Listening on", f"{host}:{port} " + ("(all interfaces)" if remote else "(this address only)"))
