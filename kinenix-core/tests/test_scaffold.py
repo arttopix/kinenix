@@ -205,3 +205,18 @@ def test_actions_command(tmp_path):
     web = kinenix("actions", "web")
     assert "web.get_table" in web.stdout and "csv.write" not in web.stdout
     assert kinenix("actions", "nothing").returncode == 1
+
+
+def test_list_names_a_flow_by_its_folder_also_from_inside_it(tmp_path, monkeypatch):
+    # #108: run inside a bundle, the flow was listed as "."; flat *_flow.md files are no longer flows
+    from kinenix.cli import discover_flows
+    bundle = tmp_path / "flows" / "tiph_test"
+    bundle.mkdir(parents=True)
+    flow = "# {}\n\n## Steps\n\n### 1. A (`logic.delay`)\n- **seconds:** 0\n"
+    (bundle / "flow.md").write_text(flow.format("TIPH Test"), encoding="utf-8")
+    (tmp_path / "flows" / "old_flow.md").write_text(flow.format("Old"), encoding="utf-8")
+    monkeypatch.setenv("KINENIX_FLOWS_DIR", str(tmp_path / "flows"))
+    monkeypatch.chdir(bundle)
+    flows = discover_flows()
+    assert "." not in flows and "old" not in flows
+    assert flows["tiph_test"][0] == bundle / "flow.md"

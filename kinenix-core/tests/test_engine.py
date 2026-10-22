@@ -39,9 +39,28 @@ def test_interpreter_basic_run():
     assert ctx.step_results[0].status == "success"
 
 
-def test_interpreter_load_sample_flow():
-    md_path = Path(__file__).parent.parent / "examples" / "sample_flow.md"
-    assert md_path.exists()
+def test_interpreter_load_sample_flow(tmp_path):
+    # Was kinenix-core/examples/sample_flow.md, removed in #108; written here, without its internet call
+    md_path = tmp_path / "flow.md"
+    md_path.write_text("""# Sample Kinenix Flow
+
+## Variables
+- `welcome_msg`: Hello Kinenix
+
+## Steps
+
+### 1. Set Initial Variable (`logic.set_variable`)
+- **output_var:** `set_result`
+- **name:** status_flag
+- **value:** active
+
+### 2. Short Delay (`logic.delay`)
+- **seconds:** 0.1
+
+### 3. Greet (`logic.set_variable`)
+- **name:** greeting
+- **value:** ${welcome_msg}, ${status_flag}
+""", encoding="utf-8")
 
     flow_def = load_flow(md_path)
 
@@ -51,6 +70,7 @@ def test_interpreter_load_sample_flow():
     assert ctx.is_completed is True
     assert ctx.has_error is False
     assert len(ctx.step_results) == 3
+    assert ctx.get_variable("greeting") == "Hello Kinenix, active"
 
 
 def test_logger_safe_serialization_with_custom_objects(tmp_path):
