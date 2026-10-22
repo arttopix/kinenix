@@ -34,7 +34,7 @@ One row per run. Answers: how many runs, which failed, success rate and duration
 | `run_id` | Id of the run on the worker (`${run.id}`, also in log file names) | `20261012T020000-abcd` |
 | `flow_name` | Flow | `TIPH Quotes` |
 | `worker_id` | Worker that ran it | `rpi4` |
-| `status` | `success` or `failed` | `failed` |
+| `status` | `success`; `partial` (the run finished, but work items or steps failed and were handled by `on_error: continue` or `next_item`); or `failed` (the run stopped) | `partial` |
 | `started_at` | Start, UTC | `2026-10-11 19:00:00.000000` |
 | `ended_at` | End, UTC | `2026-10-11 19:14:00.000000` |
 | `duration_seconds` | Duration | `840.0` |
@@ -121,7 +121,7 @@ One row per run, written when the worker sends the run.
 | `id` | Id of the run on the Hub | `53a58daa-...` |
 | `worker_id` | Worker | `rpi4` |
 | `flow_name` | Flow | `TIPH Quotes` |
-| `status` | `success` or `failed` | `failed` |
+| `status` | `success`; `partial` (the run finished, but work items or steps failed and were handled by `on_error: continue` or `next_item`); or `failed` (the run stopped) | `partial` |
 | `start_time` | Start, UTC | `2026-10-11 19:00:00.000000` |
 | `end_time` | End, UTC | `2026-10-11 19:14:00.000000` |
 | `duration_seconds` | Duration | `840.0` |
@@ -151,6 +151,7 @@ One row per run, written when the worker sends the run.
 | `items_total` | Work items | `12` |
 | `items_done` | Work items done | `6` |
 | `items_failed` | Work items failed | `1` |
+| `failure_count` | Failures recorded, also those the run went on after | `2` |
 | `report_md` | Run report | `# TIPH Quotes, ...` |
 
 ### `step_results`

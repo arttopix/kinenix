@@ -223,3 +223,46 @@ def test_the_run_screenshot_is_stored():
                                    "error_screenshot_path": "./errors/step_1.png"}}
     execution_id = _ingest(payload)
     assert client.get(f"/api/v1/executions/{execution_id}").json()["screenshot_path"] == "./errors/step_1.png"
+
+
+# #110: a run that finished with failed items or steps on the way is partial, not success
+PARTIAL_RUN = {
+    "flow_name": "TIPH Motor Insurance Quotes", "start_time": "2026-10-22T08:13:59Z", "has_error": False,
+    "kinenix_version": "0.4.0b1", "items": {"total": 2, "done": 1, "failed": 1},
+    "metrics": {"total_duration_seconds": 82.1},
+    "step_results": [
+        _step("step_9", "Choose Insurance Class", "web.click", "failed", subflow="process_request",
+              loop={"index": 2, "of": 2, "item": "R002 HONDA HR-V"}, error_message="Locator.click: Timeout",
+              error_type="Technical", failure=_failure("continued")),
+        _step("step_12", "Send Completion Notice", "email.send", "success"),
+    ],
+}
+
+
+@pytest.mark.parametrize("payload, status", [
+    (PARTIAL_RUN, "partial"),
+    ({**PARTIAL_RUN, "items": None}, "partial"),  # no item counts: a failed step is enough
+    ({**PARTIAL_RUN, "items": {"total": 2, "done": 2, "failed": 0},
+      "step_results": [_step("s1", "Greet", "logic.set_variable", "success")]}, "success"),
+    (NEW_WORKER_RUN, "failed"),
+])
+def test_run_status(payload, status):
+    execution_id = _ingest(payload)
+    assert _rows("SELECT status FROM v_runs WHERE execution_id = :id", execution_id)[0]["status"] == status
+    assert client.get(f"/api/v1/executions/{execution_id}").json()["status"] == status
+
+
+def test_a_partial_run_reports_what_failed():
+    execution_id = _ingest(PARTIAL_RUN)
+    run = _rows("SELECT report_md FROM v_runs WHERE execution_id = :id", execution_id)[0]
+    assert run["report_md"].startswith("# TIPH Motor Insurance Quotes, 2026-10-22 08:13 +00:00 (partial)\n")
+    assert "- Items: 1 of 2 done, 1 failed, 0 not reached\n" in run["report_md"]
+    details = client.get(f"/api/v1/executions/{execution_id}").json()["details"]
+    assert (details["items_failed"], details["failure_count"]) == (1, 1)
+
+
+def test_partial_text_says_what_failed_in_plain_words():
+    from kinenix_hub.console import partial_text
+    assert partial_text({"items_total": 2, "items_failed": 1, "failure_count": 3}) == "1 of 2 items failed"
+    assert partial_text({"failure_count": 2}) == "2 step(s) failed and the run went on"
+    assert partial_text(None) == "some steps failed and the run went on"

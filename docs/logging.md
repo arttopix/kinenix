@@ -112,6 +112,8 @@ Every step result records where it ran and what happened:
 | `retries` | Retries made before the step succeeded or failed |
 | `failure` | For a failed step: `exception`, `root_cause`, `suggested_fix`, `screenshot`, `handled` (`stopped`, `continued`, `fallback`, `next_item`), and `from_subflow` (true on a `flow.call` step whose subflow failed; the failure itself is recorded on the subflow's step) |
 
+`root_cause` and `suggested_fix` are rule-based, on the worker, without AI. For web actions, Playwright's fixed message patterns are turned into one sentence: what covered the element a click was meant for (and whether it looks like a cookie banner, a popup, or a menu), a selector that never appeared or matches several elements, a site that could not be reached. A failed subflow repeats its own step's diagnosis with where it happened. An unknown message keeps a general wording; the full message is always in `error_message`.
+
 `items` counts work items: the iterations of loops that have an `item_label`, as `{"total": 12, "done": 10, "failed": 1}`; the rest were not reached. A loop without `item_label` is not counted, so loops that only tick options do not inflate the numbers. `items` is `null` when the flow has no such loop.
 
 `section` says where a step or the run's failure is in `flow.md`: `steps`, `on_error`, or `finally`. A run whose Steps succeeded but whose `## Finally` failed has `has_error: true` and `failure_details.section: "finally"`, and the console prints `Result: FAILED at step [finally_1] '...' in Finally`.

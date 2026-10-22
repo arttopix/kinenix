@@ -12,6 +12,7 @@ from .evaluator import VariableEvaluator
 from .logger import ExecutionLogger
 from .markdown import JSON_FLOW_NOT_RUN, SECTION_HEADINGS, markdown_to_flow
 from .redaction import NOT_SECRET_ENV, Redactor
+from .web_errors import explain as explain_web_error
 from .requires import requirement_problem
 from .. import __version__
 from ..actions.registry import ActionRegistry
@@ -251,8 +252,18 @@ class FlowInterpreter:
             root_cause = f"Business rule in step '{step.name}' was not met: {err_msg}"
             suggested_fix = "Check the input data of this item, or change the condition in flow.md if the rule itself is wrong."
         elif isinstance(exc, SubflowExecutionError):
-            root_cause = f"Subflow execution failed in '{exc.subflow_name}': {err_msg}"
-            suggested_fix = f"Inspect child subflow '{exc.subflow_name}' definition and input parameters passed in step '{step.id}'."
+            # The subflow's own diagnosis says what happened; repeat it with where (#111)
+            child_details = getattr(child, "failure_details", None)
+            if child_details is not None and child_details.root_cause:
+                root_cause = (f"In subflow '{exc.subflow_name}', step '{child_details.failed_step_name}': "
+                              f"{child_details.root_cause}")
+                suggested_fix = child_details.suggested_fix or ""
+            else:
+                root_cause = f"Subflow execution failed in '{exc.subflow_name}': {err_msg}"
+                suggested_fix = f"Inspect child subflow '{exc.subflow_name}' definition and input parameters passed in step '{step.id}'."
+        elif explain_web_error(err_msg) is not None:
+            # Known Playwright patterns: what blocked the click, what was not found, why the site failed (#111)
+            root_cause, suggested_fix = explain_web_error(err_msg)
         elif isinstance(exc, FileNotFoundError) or ("not found" in err_msg.lower() and "file" in err_msg.lower()):
             root_cause = f"Required file was not found during execution of step '{step.name}'."
             suggested_fix = "Verify the target file path exists and that relative paths are correctly anchored to the flow project directory."
