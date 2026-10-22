@@ -2,6 +2,40 @@
 
 `kinenix`, `kinenix-hub`, and `kinenix-worker` are released together with one version. How to release: [docs/releasing.md](docs/releasing.md).
 
+## 0.4.0b1 (2026-10-23)
+
+Web actions: modern pages (cards instead of tables, custom dropdowns, paged tables, single-page apps) in one step each.
+
+**A parent flow now continues on the page its subflow left** (a page the subflow went to, switched to, or opened). Before, it kept its own page. Set `propagate_sessions: false` on the `flow.call` to keep the old behavior. **Add `> Requires: kinenix>=0.4.0b1` to a flow that uses `on_error: next_item`** (`kinenix validate` says when): Kinenix 0.3.0b1 and older stop the flow at that step.
+
+### Web
+
+- `web.goto` goes to a URL in the current tab, and opens a browser when none is open (#58).
+- `web.choose` picks an option by name in custom dropdowns (Radix and shadcn Select, cmdk combobox, Headless UI, MUI) or a native `<select>`, optionally typing into its search box. A missing option fails with the list of options that are there (#57).
+- `web.get_list` reads repeated elements such as cards into rows, with `fields` (text, `@attribute`, or the element itself), `numeric_fields`, `required_fields`, `add_columns`, and `min_rows` (#55).
+- `web.get_table` and `web.get_list` read every page of a paged table or list with `next_selector`; more pages than `max_pages` fails instead of leaving pages out.
+- A browser a subflow opened is closed at the end of the run; a subflow with `propagate_sessions: false` uses its own browser, which is closed when it ends.
+- A failed web step says in one line what went wrong and how to fix it, instead of only Playwright's call log: what covered the element (named as a cookie banner, popup, or menu when it looks like one), a selector that never appeared or matches several elements, a hidden or disabled element, a site that could not be reached. A failed subflow passes its step's cause up to the caller. No AI is involved; unknown messages keep the general wording (#111).
+
+### Flows
+
+- `on_error: next_item` for steps inside a `logic.loop`: the failure is recorded, the rest of the item is skipped, and the loop goes on with its next item. The item counts as failed (#102).
+- A value with a leading zero, such as `0012`, stays text. `kinenix validate` reports a `{...}` or `[...]` value that is not valid JSON, which would be read as text (#103).
+- A run that succeeds no longer carries `failure_details` from a failure handled by `on_error: continue` (#102).
+
+### Hub
+
+- A run that finished, but with failed work items or failures it went on after, is **partial** instead of success: an amber "สำเร็จบางส่วน · 1 จาก 2 รายการไม่สำเร็จ" on the dashboard, with a filter, and `partial` in `hub status`, `logs`, `report`, and `hub query`. Runs already stored are updated when the Hub starts (#110).
+- The steps view and `kinenix hub logs` show a failed step's cause, how to fix it, and the work item it failed on; the full message is one click away.
+- The startup banner shows the dashboard's LAN address when other machines may log in; `http://127.0.0.1:8080` opened over ssh is the viewer's own machine.
+
+### Also
+
+- `kinenix list` names a flow by its folder also when run inside it (it showed `.`), and no longer lists the old flat flows from `kinenix-core/examples`, which were removed (#108).
+- `PWD` and `OLDPWD` are no longer hidden as secrets, so paths in logs stay readable on Linux and macOS (#101).
+- Every action declares what it can do outside the run (`email`, `files`, `web`, `network`); `kinenix actions` shows it.
+- CI runs the browser tests in Chromium on Linux and Windows.
+
 ## 0.3.0b1 (2026-10-16)
 
 Expressions: count, join, clean, pick, and calculate values inside `${...}`, safely. Design: [docs/design/expressions.md](docs/design/expressions.md).

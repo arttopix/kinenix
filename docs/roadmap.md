@@ -78,10 +78,10 @@ Automated:
 - [x] `web.get_table` and `web.get_list` read every page of a paged list or table: `next_selector` is clicked until it is disabled or gone, `max_pages` limits the pages, and the rows of all pages are returned in order
 - [x] Each action has tests against local HTML pages (no internet), declares `accepted_parameters`, and passes `kinenix validate`
 - [x] Agent-interface foundation ([design/agent-interface.md](design/agent-interface.md), section 10): every action declares its side-effect kind (`email`, `files`, `web`, `network`, `none`), the existing ones included; new commands keep their logic in functions that return data, and `cli.py` only parses and prints
-- [ ] All four test suites pass, and CI is green
+- [x] All four test suites pass, and CI is green
 
 Field test:
-- [ ] The real insurance-quote flow uses `web.goto`, `web.choose`, `web.get_list`, and expressions (`len`, `join`, `number` instead of its workarounds) and runs on the Raspberry Pi worker
+- [x] The real insurance-quote flow uses `web.goto`, `web.choose`, `web.get_list`, and expressions (`len`, `join`, `number` instead of its workarounds) and runs on the Raspberry Pi worker
 
 Docs and release:
 - [x] `docs/actions_reference.md` documents each action with a `flow.md` example

@@ -22,6 +22,10 @@ _RESOLVED = re.compile(r"locator resolved to (?:visible |hidden )?(<[^\n]{1,300}
 _INTERCEPT = re.compile(r"(<[^\n]*?>)(?:…</\w+>)?(?: from (<[^\n]*?>)(?:…</\w+>)? subtree)? intercepts pointer events")
 _STRICT = re.compile(r"strict mode violation: (.{1,200}?) resolved to (\d+) elements")
 _NET = re.compile(r"net::(ERR_[A-Z_]+)")
+# The pointer action Playwright was doing: "Locator.hover: Timeout ..." is a hover, not a click
+_ACTION = re.compile(r"\b(?:Locator|Page|Frame|ElementHandle)\.(\w+):")
+_ACTION_WORDS = {"dblclick": "double-click", "hover": "hover", "check": "check", "uncheck": "uncheck",
+                 "tap": "tap", "set_checked": "check", "setChecked": "check", "drag_to": "drag", "dragTo": "drag"}
 
 _NET_CAUSES = {
     "ERR_NAME_NOT_RESOLVED": "the website's name could not be found (DNS): the address is wrong, or this machine has no working DNS",
@@ -79,6 +83,11 @@ def _target(message: str) -> str:
     return f"locator({locator.group(1)})" if locator else "the element"
 
 
+def _pointer_action(message: str) -> str:
+    action = _ACTION.search(message)
+    return _ACTION_WORDS.get(action.group(1), "click") if action else "click"
+
+
 def _seconds(message: str) -> str:
     timeout = _TIMEOUT.search(message)
     return f"{int(timeout.group(1)) / 1000:g} s" if timeout else "the timeout"
@@ -101,8 +110,9 @@ def explain(message: str) -> Optional[Explanation]:
         fixes = [_FIXES[kind] for kind in dict.fromkeys(kind for _, kind in blockers if kind)]
         fix = " ".join(fixes) or ("Wait until the covering element is gone (web.wait_for with state: hidden) or "
                                   "close it before this step.")
+        action = _pointer_action(message)
         return Explanation(
-            f"The click on {_target(message)} was blocked: {names} covered it, so the click would have hit "
+            f"The {action} on {_target(message)} was blocked: {names} covered it, so the {action} would have hit "
             f"the wrong element. The element itself was found and ready.", fix)
 
     strict = _STRICT.search(message)
