@@ -121,3 +121,24 @@ def test_print_execution_log_without_steps():
     console = Console(record=True, width=120, color_system=None)
     hub_console.print_execution_log(console, {"execution": {"id": "x", "status": "success"}, "steps": []})
     assert "No step details" in console.export_text()
+
+
+def test_a_failed_step_shows_the_workers_diagnosis_and_its_item():
+    # #111: the dashboard and `hub logs` show root_cause and suggested_fix first, and which item failed
+    payload = {**PAYLOAD, "step_results": [
+        {"step_id": "s9", "step_name": "Choose Insurance Class", "action": "web.click", "status": "failed",
+         "duration_seconds": 10.0, "error_type": "Technical", "error_message": "Locator.click: Timeout 10000ms",
+         "loop": {"index": 2, "of": 2, "item": "R002 HONDA HR-V"},
+         "failure": {"root_cause": "The click was blocked: div#onetrust-consent-sdk (cookie banner) covered it.",
+                     "suggested_fix": "Accept or close the cookie banner before this step.", "handled": "continued"}},
+    ]}
+    step = client.get(f"/api/v1/executions/{_ingest(payload)}/steps").json()["steps"][0]
+    assert step["root_cause"].startswith("The click was blocked") and step["item"] == "R002 HONDA HR-V"
+    assert step["suggested_fix"] == "Accept or close the cookie banner before this step."
+
+    console = Console(record=True, width=200)
+    hub_console.print_execution_log(console, {"execution": {"id": "x", "status": "partial", "details": {
+        "items_total": 2, "items_failed": 1}}, "steps": [step]})
+    text = console.export_text()
+    assert "(cookie banner) covered it" in text and "Fix: Accept or close" in text and "(R002 HONDA HR-V)" in text
+    assert "1 of 2 items failed" in text

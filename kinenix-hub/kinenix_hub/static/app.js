@@ -249,14 +249,21 @@ async function openStepsModal(executionId) {
       const pill = STEP_STATUS_CLASSES[s.status] || STEP_STATUS_CLASSES.skipped;
       const duration = typeof s.duration_seconds === 'number' ? `${s.duration_seconds.toFixed(1)}s` : '-';
       const error = s.error_message ? `${s.error_type ? s.error_type + ': ' : ''}${s.error_message}` : '';
+      // The worker's diagnosis first (#111); the full message stays one click away
+      const errorCell = s.root_cause
+        ? `<div class="text-rose-200">${escapeHtml(s.root_cause)}</div>
+           ${s.suggested_fix ? `<div class="mt-1 text-amber-300">วิธีแก้: ${escapeHtml(s.suggested_fix)}</div>` : ''}
+           ${error ? `<details class="mt-1 text-slate-400"><summary class="cursor-pointer">ข้อความเต็ม</summary><pre class="whitespace-pre-wrap text-[10px]">${escapeHtml(error)}</pre></details>` : ''}`
+        : escapeHtml(error);
+      const item = s.item ? `<div class="text-[10px] text-slate-400">รายการ: ${escapeHtml(s.item)}</div>` : '';
       return `
         <tr class="${s.status === 'failed' ? 'bg-rose-950/30' : ''}">
           <td class="py-2 px-3 text-slate-500 font-mono">${i + 1}</td>
-          <td class="py-2 px-3 text-slate-100">${escapeHtml(s.step_name || s.step_id)}</td>
+          <td class="py-2 px-3 text-slate-100">${escapeHtml(s.step_name || s.step_id)}${item}</td>
           <td class="py-2 px-3 text-slate-400 font-mono">${escapeHtml(s.action)}</td>
           <td class="py-2 px-3"><span class="px-2 py-0.5 rounded-full text-[10px] border ${pill}">${status}</span></td>
           <td class="py-2 px-3 font-mono text-slate-300">${duration}</td>
-          <td class="py-2 px-3 text-rose-300 break-words">${escapeHtml(error)}</td>
+          <td class="py-2 px-3 text-rose-300 break-words">${errorCell}</td>
         </tr>`;
     }).join('');
   } catch (err) {

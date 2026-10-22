@@ -42,8 +42,17 @@ def record_heartbeat(
 
 # Step fields safe to show in the dashboard and CLI. Step output and flow variables are left out
 # because they can carry business data (form values, extracted documents, credentials in URLs).
+# root_cause and suggested_fix are the worker's diagnosis of a failed step, item its loop item's label (#111).
 STEP_FIELDS = ("step_id", "step_name", "action", "status", "start_time", "end_time",
-               "duration_seconds", "error_type", "error_message")
+               "duration_seconds", "error_type", "error_message", "root_cause", "suggested_fix", "item")
+
+
+def _step_summary(step: Dict[str, Any]) -> Dict[str, Any]:
+    failure = step.get("failure") if isinstance(step.get("failure"), dict) else {}
+    loop = step.get("loop") if isinstance(step.get("loop"), dict) else {}
+    derived = {"root_cause": failure.get("root_cause"), "suggested_fix": failure.get("suggested_fix"),
+               "item": loop.get("item")}
+    return {field: derived[field] if field in derived else step.get(field) for field in STEP_FIELDS}
 
 
 def step_summaries(raw_log: Optional[str]) -> List[Dict[str, Any]]:
@@ -54,7 +63,7 @@ def step_summaries(raw_log: Optional[str]) -> List[Dict[str, Any]]:
         steps = json.loads(raw_log).get("step_results") or []
     except (ValueError, AttributeError):
         return []
-    return [{field: step.get(field) for field in STEP_FIELDS} for step in steps if isinstance(step, dict)]
+    return [_step_summary(step) for step in steps if isinstance(step, dict)]
 
 
 def ingest_execution_log(db: Session, payload: Dict[str, Any], worker_id: str = "local-worker") -> Execution:

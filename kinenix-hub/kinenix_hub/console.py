@@ -365,9 +365,15 @@ def print_execution_log(console: Console, data: Dict[str, Any], now: Optional[da
         error = step.get("error_message") or "-"
         if step.get("error_type") and step.get("error_message"):
             error = f"{step['error_type']}: {step['error_message']}"
+        if step.get("root_cause"):
+            # The worker's diagnosis reads better than Playwright's call log (#111); the dashboard keeps the full message
+            error = step["root_cause"] + (f"\nFix: {step['suggested_fix']}" if step.get("suggested_fix") else "")
+        name = step.get("step_name") or step.get("step_id") or "-"
+        if step.get("item"):
+            name += f"\n({step['item']})"
         table.add_row(
             str(number),
-            Text(step.get("step_name") or step.get("step_id") or "-"),
+            Text(name),
             Text(step.get("action") or "-", style="dim"),
             _styled(step.get("status"), STEP_STATUS_STYLES),
             f"{duration:.1f}s" if isinstance(duration, (int, float)) else "-",
