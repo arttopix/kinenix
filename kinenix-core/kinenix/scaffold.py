@@ -61,6 +61,41 @@ def create_new_project(title: str, target: Optional[Path] = None) -> Path:
     return target
 
 
+AGENT_FILES = ("AGENTS.md", "CLAUDE.md")
+_AGENTS_TITLE = re.compile(r"^# Instructions for AI assistants: (.+)$", re.M)
+
+
+def update_agent_instructions(project: Path) -> List[Path]:
+    """
+    Rewrite AGENTS.md and CLAUDE.md of an existing project from the current template, keeping the project's
+    title, so an older project's AI assistant follows today's rules (#105). A changed AGENTS.md is kept as
+    AGENTS.md.bak first. Returns the files written.
+    """
+    project = Path(project).resolve()
+    if not (project / "flow.md").is_file():
+        raise ValueError(f"{project} is not a flow project: it has no flow.md.")
+    current = project / "AGENTS.md"
+    old = current.read_text(encoding="utf-8") if current.is_file() else ""
+    title = _AGENTS_TITLE.search(old)
+    if title:
+        title = title.group(1).strip()
+    else:
+        heading = re.search(r"^# (.+)$", (project / "flow.md").read_text(encoding="utf-8-sig"), re.M)
+        title = heading.group(1).strip() if heading else project.name
+    written = []
+    for name in AGENT_FILES:
+        text = (NEW_PROJECT_TEMPLATE / name).read_text(encoding="utf-8").replace("{{title}}", title)
+        dest = project / name
+        before = dest.read_text(encoding="utf-8") if dest.is_file() else None
+        if before == text:
+            continue
+        if name == "AGENTS.md" and before:
+            (project / "AGENTS.md.bak").write_text(before, encoding="utf-8")
+        dest.write_text(text, encoding="utf-8")
+        written.append(dest)
+    return written
+
+
 def _walk(steps: Iterable[Step]) -> Iterable[Step]:
     for step in steps or []:
         yield step

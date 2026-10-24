@@ -95,7 +95,7 @@ Then:
    kinenix run get_stock_data
    ```
 
-The `bot_fx_rate` example below was built this way: its README contains the original requirements.
+The `bot_fx_rate` example below was built this way, from its `requirements.md`. Every example has one, as a model for writing yours.
 
 ## 6. Automate a website (2 minutes)
 
