@@ -79,7 +79,7 @@ Launches a browser instance and navigates to a target URL.
 **Parameters:**
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
-| `url` | string | Yes | - | URL of the website to open. If the parameter is given but resolves to an empty value (for example `${config.url}` with no config loaded), the step fails instead of opening a blank page |
+| `url` | string | Yes | - | URL of the website to open, or a page saved in the flow's folder such as `tests/pages/form.html` (opened as a local file, for testing; see [project_bundles.md](project_bundles.md#4-testing-against-saved-pages)). If the parameter is given but resolves to an empty value (for example `${config.url}` with no config loaded), the step fails instead of opening a blank page |
 | `headless` | boolean | No | `false` | Run browser in headless mode |
 | `timeout` | number | No | `30000` | Navigation timeout in milliseconds |
 
@@ -98,7 +98,7 @@ Goes to a URL **in the current tab** (Kinenix 0.4.0b1). `web.open` opens a new t
 **Parameters:**
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
-| `url` | string | Yes | - | URL to go to. An empty value (for example `${config.url}` with no config loaded) fails the step |
+| `url` | string | Yes | - | URL to go to, or a page saved in the flow's folder such as `tests/pages/form.html`. An empty value (for example `${config.url}` with no config loaded) fails the step |
 | `wait_until` | string | No | `load` | When the page counts as loaded: `load`, `domcontentloaded`, `networkidle` (no network traffic for 0.5 s; slower), or `commit` |
 | `timeout` | number | No | `30000` | Navigation timeout in milliseconds |
 | `headless` | boolean | No | `false` | Only used when `web.goto` opens the browser |
@@ -438,8 +438,10 @@ Options are found by their accessibility role (`role="option"`), which these lib
 | `selector` | string | Either | - | CSS selector or XPath of the element that opens the dropdown (the button or input you click), or of a native `<select>` |
 | `label` | string | Either | - | Label identifier of that element |
 | `option` | string | Yes | - | Name of the option to pick. An empty value (for example a missing variable) fails the step |
-| `exact` | boolean | No | `true` | `true` needs the whole name, so `HONDA` does not pick `HONDA BIGWING`. `false` picks the first option whose name contains `option`, ignoring case |
-| `search` | boolean | No | `false` | Type `option` into the dropdown's search box before picking, for long lists that show only what matches |
+| `match` | string | No | `exact` | How `option` is compared with the names shown. `exact`: the whole name, so `HONDA` does not pick `HONDA BIGWING`. `loose` (Kinenix 0.5.0b1): the same name apart from spaces, hyphens, dots, and similar marks and case, so `HRV`, `hr-v`, and `HR V` pick `HR-V`; when several names match loosely, the step fails and lists them instead of guessing. `contains`: the first name that contains `option`, ignoring case. An exact name always wins |
+| `exact` | boolean | No | `true` | The older spelling: `false` is `match: contains` |
+| `search` | boolean | No | `false` | Type into the dropdown's search box before picking, for long lists that show only what matches |
+| `search_text` | string | No | `option` | What to type into the search box. The site filters by what is typed, so with `match: loose` type the start of the name as the site writes it, for example `HR` for `HR-V` |
 | `search_selector` | string | No | - | The search box, when it is not found by itself (cmdk input, `role=combobox` input, `type=search` input, or an input in the open dialog or list) |
 | `timeout` | number | No | `10000` | Milliseconds to wait for the dropdown and for the option to appear |
 
@@ -453,6 +455,23 @@ Options are found by their accessibility role (`role="option"`), which these lib
 - **selector:** `[data-testid=carModel]`
 - **option:** ${req.model}
 - **search:** true
+```
+
+**Names written differently by people:** `match: loose` covers spacing, marks, and case (`HRV` for `HR-V`). For names that really differ, such as a short form or a Thai and an English name, keep a table in `config/config.json` and look the name up, keeping it as written when it is not in the table:
+
+```json
+{"models": {"HRV": "HR-V", "แจ๊ส": "JAZZ"}}
+```
+
+```markdown
+> Requires: kinenix>=0.5.0b1
+
+### 4. Car Model (`web.choose`)
+- **selector:** `[data-testid=carModel]`
+- **option:** ${default(config.models[req.model], req.model)}
+- **match:** loose
+- **search:** true
+- **search_text:** ${substring(default(config.models[req.model], req.model), 0, 2)}
 ```
 
 **Output:** `{"option": "<name of the option picked>", "status": "chosen"}`

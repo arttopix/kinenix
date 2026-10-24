@@ -16,9 +16,9 @@ Toward 1.0.0, a `flow.md` written for 1.0 keeps running on every 1.x version.
 | :--- | :--- | :--- | :--- |
 | 0.2.0b3: Silent bugs and docs | No silent wrong results; documentation examples that work | 2026-10-10 | Released |
 | 0.2.0b4: Subflows, error handling, and run records | Failures handled in one place and recorded as facts the Hub can answer questions from | 2026-10-16 | Released |
-| 0.3.0b1: Expressions | Count, join, clean, and calculate values in `${...}`, safely | 2026-10-20 | Next |
-| 0.4.0b1: Web actions | Modern web pages without multi-step workarounds | 2026-10-23 | Planned |
-| 0.5.0b1: Proven on business flows | Real business examples, run by CI with a real browser and for days on real machines | 2026-10-28 | Planned |
+| 0.3.0b1: Expressions | Count, join, clean, and calculate values in `${...}`, safely | 2026-10-20 | Released |
+| 0.4.0b1: Web actions | Modern web pages without multi-step workarounds | 2026-10-23 | Released |
+| 0.5.0b1: Proven on business flows | Real business examples, run by CI with a real browser and for days on real machines | 2026-10-28 | Next |
 | 1.0.0: Stable core | A core that can be trusted, with a written stability promise | 2026-11-03 | Planned |
 | 1.1.0: Agent interface | AI agents, small local ones first, can use Kinenix: ask about runs, start runs, and read the results | After 1.0.0 | Planned |
 | 1.2.0: Developer tools | See and check flows in the editor | After 1.1.0 | Planned |
@@ -44,20 +44,20 @@ Toward 1.0.0, a `flow.md` written for 1.0 keeps running on every 1.x version.
 **Exit criteria**
 
 Automated:
-- [ ] Functions `len`, `join`, `number`, `trim`, `lower`, `upper`, `replace`, `default`, `round`, `part`, `substring`; `+ - * / %` on numbers; indexing `rows[0]` and `row['name']`; each with tests, including bad input (design: docs/design/expressions.md)
-- [ ] Conditions combine comparisons with `and`, `or`, and `not`, and a value such as `Johnson and Johnson` is not split
-- [ ] `kinenix validate` reports expression syntax errors and unknown functions with their line
-- [ ] Unknown functions, attribute access such as `__class__`, and anything outside the list are refused with a clear message (security tests)
-- [ ] Fuzz test: thousands of random and malformed expressions never crash the parser, never hang, and never run code
-- [ ] Every existing example and test flow compiles and runs unchanged
-- [ ] All four test suites pass, and CI is green
+- [x] Functions `len`, `join`, `number`, `trim`, `lower`, `upper`, `replace`, `default`, `round`, `part`, `substring`; `+ - * / %` on numbers; indexing `rows[0]` and `row['name']`; each with tests, including bad input (design: docs/design/expressions.md)
+- [x] Conditions combine comparisons with `and`, `or`, and `not`, and a value such as `Johnson and Johnson` is not split
+- [x] `kinenix validate` reports expression syntax errors and unknown functions with their line
+- [x] Unknown functions, attribute access such as `__class__`, and anything outside the list are refused with a clear message (security tests)
+- [x] Fuzz test: thousands of random and malformed expressions never crash the parser, never hang, and never run code
+- [x] Every existing example and test flow compiles and runs unchanged
+- [x] All four test suites pass, and CI is green
 
 Field test:
 - [x] A demo flow with `len`, `join`, `number`, `part`, and `and` runs on the Raspberry Pi worker; the real insurance-quote flow is tested in 0.4.0b1 together with the new web actions
 
 Docs and release:
-- [ ] `docs/flow_markdown_spec.md` documents every function with an example
-- [ ] CHANGELOG entry; TestPyPI checked; tag `v0.3.0b1`; PyPI checked
+- [x] `docs/flow_markdown_spec.md` documents every function with an example
+- [x] CHANGELOG entry; TestPyPI checked; tag `v0.3.0b1`; PyPI checked
 
 **Compatibility:** `${a.b}` and existing conditions behave as before. Text inside `${...}` that looks like a function call, such as `${len(x)}`, is now evaluated.
 
@@ -85,7 +85,7 @@ Field test:
 
 Docs and release:
 - [x] `docs/actions_reference.md` documents each action with a `flow.md` example
-- [ ] CHANGELOG entry; TestPyPI checked; tag `v0.4.0b1`; PyPI checked
+- [x] CHANGELOG entry; TestPyPI checked; tag `v0.4.0b1`; PyPI checked (released 2026-10-24)
 
 **Compatibility:** new actions only. `web.open` still opens a new tab. A parent flow now sees the page its subflow left open (before, it kept its own page).
 
@@ -95,7 +95,7 @@ Docs and release:
 
 **Goal:** show and prove that Kinenix does real business work end to end. Each example is a complete project someone can copy and adapt, runs without internet against sample data and local pages, and is run by CI and on real machines for days. These examples are the gate that 1.0.0 must keep passing.
 
-**Scope:** three new example projects, an end-to-end CI job with a real browser, failure-injection tests, and a soak test on the Raspberry Pi worker.
+**Scope:** three new example projects, an end-to-end CI job with a real browser, failure-injection tests, and a soak test on the Raspberry Pi worker. From the 0.4.0b1 field test: #105 (leftover JSON flows, refreshing a project's AGENTS.md), #106 (testing a flow against saved pages with `kinenix run --config`), #107 (`web.choose` with `match: loose`).
 
 | Example | Business story | Patterns it proves |
 | :--- | :--- | :--- |
@@ -106,7 +106,7 @@ Docs and release:
 **Exit criteria**
 
 Examples:
-- [ ] Each example has a README (the business story, input, output, how to run, how long it takes), fake sample data only, `> Requires:`, `redact` for personal fields, `## On Error` and `## Finally`, and passes `kinenix validate`
+- [ ] Each example has the `requirements.md` it was built from, in the sections of `kinenix init` (a test checks every example; the four existing examples have one), a README (the business story, input, output, how to run, how long it takes), fake sample data only, `> Requires:`, `redact` for personal fields, `## On Error` and `## Finally`, and passes `kinenix validate`
 - [ ] Each ships with the package (`kinenix init --example`) and appears in a new `docs/examples.md` that says which patterns it shows
 
 Automated:

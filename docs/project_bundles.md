@@ -131,3 +131,26 @@ The project bundle structure directly enables a robust deployment pipeline to un
 ### Stage 5: Execution & Telemetry
 - Worker executes the bundle: `kinenix-worker run <bundle>`.
 - Step results, business metrics, and failure screenshots are streamed in real time to the Hub dashboard.
+
+## 4. Testing Against Saved Pages
+
+A web flow depends on pages it does not control: a changed button, a new cookie banner, or a renamed field breaks it in production. Testing it against saved copies of those pages catches the flow's own mistakes before it touches the real site, without internet, on any machine, and in CI.
+
+1. **Save the pages** the flow visits under `tests/pages/` in the bundle (in the browser: Save page as, "Webpage, Complete"), and remove customer data from them. Open each saved page in a browser first: a page built by JavaScript may need its scripts to show the form, and then a hand-written HTML page with the same selectors is the better test page.
+2. **Point the flow at them** with a second settings file. `config/test.json` holds only the keys that change for a test run; the rest comes from `config/config.json`:
+   ```json
+   {
+     "website_url": "tests/pages/quote_form.html",
+     "input_csv": "input/test_requests.csv",
+     "email": {"to": "me@example.com", "dry_run": true}
+   }
+   ```
+   `web.open` and `web.goto` open a path that names a file in the bundle (here `tests/pages/quote_form.html`) as a local page, so the same file works on every machine.
+3. **Run with it:**
+   ```bash
+   kinenix run tiph_quotes --config config/test.json
+   ```
+   Each key of the file replaces the same key of `config/config.json` for this run only; a key holding an object, such as `email`, is replaced as a whole. `--vars '{"config": {...}}'` is applied on top, for a one-off change.
+4. **Check the outcome:** `kinenix run` exits with 1 when the run fails; compare the files under `output/` (rows written, failed items in the summary) with what the saved pages should give. Keep the saved pages and the test file in git with the flow, and refresh the pages when the real site changes.
+
+A command that runs such a test and compares the results by itself (`kinenix test`) is planned for 1.2.0.

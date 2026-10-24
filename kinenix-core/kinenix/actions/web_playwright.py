@@ -112,12 +112,30 @@ class WebOpenAction(BaseAction):
         context.set_variable("__playwright_page__", page)
 
         if url:
-            page.goto(url, wait_until="networkidle")
+            page.goto(_page_url(url, context), wait_until="networkidle")
 
         return {"url": url, "headless": headless, "status": "opened"}
 
 
 WAIT_UNTIL = ("load", "domcontentloaded", "networkidle", "commit")
+_URL_SCHEME = re.compile(r"^[a-zA-Z][a-zA-Z0-9+.-]*:")
+
+
+def _page_url(url: Any, context: ExecutionContext) -> str:
+    """
+    A URL, or a page saved in the flow's folder: a path without a scheme (tests/pages/quote.html) that names a
+    file in the bundle opens as a file:// URL, so a flow can be tested against saved pages on any machine (#106).
+    Anything else is passed to the browser unchanged.
+    """
+    text = str(url).strip()
+    if _URL_SCHEME.match(text) and not re.match(r"^[a-zA-Z]:[\\/]", text):
+        return text
+    path = Path(text)
+    if not path.is_absolute():
+        flow_dir = context.get_variable("__flow_dir__")
+        if flow_dir:
+            path = Path(flow_dir) / path
+    return path.resolve().as_uri() if path.is_file() else text
 
 
 @register_action("web.goto")
@@ -145,7 +163,7 @@ class WebGotoAction(BaseAction):
             page.set_default_timeout(timeout)
             context.set_variable("__playwright_page__", page)
 
-        page.goto(str(url), wait_until=wait_until, timeout=timeout)
+        page.goto(_page_url(url, context), wait_until=wait_until, timeout=timeout)
         return {"url": page.url, "title": page.title(), "status": "navigated"}
 
 
@@ -432,14 +450,44 @@ _CHOOSE_SEARCH_INPUTS = "[cmdk-input], input[role=combobox], [role=combobox] inp
 _OUTSIDE_NATIVE_SELECT = "xpath=//*[not(ancestor::select)]"
 
 
+CHOOSE_MATCH = ("exact", "contains", "loose")
+_LOOSE_IGNORED = re.compile(r"[\s\-_.,/:()]+")
+
+
+def _loose(text: str) -> str:
+    """HR-V, hr v, and HRV compare equal: spaces, hyphens, dots, and similar marks and case are ignored."""
+    return _LOOSE_IGNORED.sub("", text).casefold()
+
+
+def _choose_label(labels: List[str], option: str, match: str) -> Optional[str]:
+    """
+    The option to pick among the labels shown, or None. An exact name always wins. loose: the one label equal
+    to the option apart from spaces, marks, and case; several such labels are an error, never a guess (#107).
+    contains: the first label containing the option, ignoring case.
+    """
+    if option in labels:
+        return option
+    if match == "contains":
+        return next((label for label in labels if option.lower() in label.lower()), None)
+    if match == "loose":
+        found = list(dict.fromkeys(label for label in labels if _loose(label) == _loose(option)))
+        if len(found) > 1:
+            raise ValueError(f"web.choose: option '{option}' matches several options loosely: {', '.join(found)}; "
+                             f"give the exact name.")
+        return found[0] if found else None
+    return None
+
+
 @register_action("web.choose")
 class WebChooseAction(BaseAction):
     """
     Picks an option in a dropdown (#57): a custom one (Radix/shadcn Select, cmdk combobox, Headless UI, MUI),
     by clicking the trigger, optionally typing into its search box, and clicking the option with that name;
     or a native <select>. When the option is missing, the error lists the options that are there.
+    match: exact (default), contains, or loose (#107); exact: false is the older spelling of contains.
     """
-    accepted_parameters = LOCATOR_PARAMETERS + ('option', 'search', 'search_selector', 'exact', 'timeout')
+    accepted_parameters = LOCATOR_PARAMETERS + ('option', 'match', 'search', 'search_text', 'search_selector',
+                                                'exact', 'timeout')
     side_effects = ('web',)
 
     def execute(self, parameters: Dict[str, Any], context: ExecutionContext) -> Any:
@@ -447,8 +495,13 @@ class WebChooseAction(BaseAction):
         option = parameters.get("option")
         if option is None or str(option).strip() == "":
             raise ValueError("web.choose: 'option' is empty. Check the value or the variable it refers to.")
-        option = str(option).strip()
-        exact = str(parameters.get("exact", True)).strip().lower() not in ("false", "0", "no")
+        option = _clean(str(option))
+        match = str(parameters.get("match") or "").strip().lower()
+        if not match:
+            exact = str(parameters.get("exact", True)).strip().lower() not in ("false", "0", "no")
+            match = "exact" if exact else "contains"
+        if match not in CHOOSE_MATCH:
+            raise ValueError(f"web.choose: match '{match}' is not one of {', '.join(CHOOSE_MATCH)}.")
         search = str(parameters.get("search", False)).strip().lower() in ("true", "1", "yes")
         timeout = float(parameters.get("timeout", 10000))
 
@@ -457,8 +510,7 @@ class WebChooseAction(BaseAction):
 
         if trigger.evaluate("el => el.tagName.toLowerCase()") == "select":
             labels = [_clean(t) for t in trigger.locator("option").all_inner_texts()]
-            chosen = next((l for l in labels if l == option), None) if exact else \
-                next((l for l in labels if option.lower() in l.lower()), None)
+            chosen = _choose_label(labels, option, match)
             if chosen is None:
                 raise ValueError(f"web.choose: option '{option}' not found; available: {', '.join(labels[:30])}")
             trigger.select_option(label=chosen)
@@ -469,21 +521,30 @@ class WebChooseAction(BaseAction):
             box_selector = parameters.get("search_selector")
             box = page.locator(box_selector).first if box_selector else page.locator(_CHOOSE_SEARCH_INPUTS).first
             box.wait_for(state="visible", timeout=timeout)
-            box.fill(option)
+            box.fill(str(parameters.get("search_text") or option))
 
-        name = option if exact else re.compile(re.escape(option), re.IGNORECASE)
-        outside = page.locator(_OUTSIDE_NATIVE_SELECT)
-        candidates = page.get_by_role("option", name=name, exact=exact).and_(outside)
-        try:
-            candidates.first.wait_for(state="visible", timeout=timeout)
-        except Exception:
-            visible = [_clean(t) for t in page.get_by_role("option").and_(outside).all_inner_texts() if _clean(t)]
-            if not visible:
-                raise ValueError(f"web.choose: no options appeared after clicking the dropdown; check the selector "
-                                 f"of the trigger, or set search: true if the list needs typing first.") from None
-            raise ValueError(f"web.choose: option '{option}' not found; available: {', '.join(visible[:30])}") from None
-        chosen = _clean(candidates.first.inner_text())
-        candidates.first.click()
+        # Options of the open list (not of native selects elsewhere on the page), read until the one wanted
+        # shows up: lists that load or filter as you type fill in over a moment
+        options = page.get_by_role("option").and_(page.locator(_OUTSIDE_NATIVE_SELECT))
+        deadline = time.monotonic() + timeout / 1000
+        labels: List[str] = []
+        while True:
+            labels = [label for label in (_clean(t) for t in options.all_inner_texts()) if label]
+            chosen = _choose_label(labels, option, match)
+            if chosen is not None or time.monotonic() > deadline:
+                break
+            page.wait_for_timeout(100)
+        if chosen is None:
+            if not labels and search:
+                typed = str(parameters.get("search_text") or option)
+                raise ValueError(f"web.choose: the search box shows no options for '{typed}'. The site filters by "
+                                 f"what is typed: set search_text to the start of the name as the site writes it "
+                                 f"(for example its first two letters), and keep match: loose to pick it.")
+            if not labels:
+                raise ValueError("web.choose: no options appeared after clicking the dropdown; check the selector "
+                                 "of the trigger, or set search: true if the list needs typing first.")
+            raise ValueError(f"web.choose: option '{option}' not found; available: {', '.join(labels[:30])}")
+        page.get_by_role("option", name=chosen, exact=True).and_(page.locator(_OUTSIDE_NATIVE_SELECT)).first.click()
         return {"option": chosen, "status": "chosen"}
 
 

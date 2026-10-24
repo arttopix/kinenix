@@ -2,15 +2,9 @@
 
 Collects one month of historical buying transfer rates from the Bank of Thailand (the previous month by default), writes them to a CSV file grouped by currency, and emails the file. Scheduled on the 1st of each month, it reports the month that just ended.
 
-## Requirement
+## Requirements
 
-1. Open https://www.bot.or.th/en/statistics/exchange-rate.html.
-2. Read the Historical Foreign Exchange Rates table.
-3. Select the currencies USD, GBP, SGD, JPY, EUR and collect the transfer rate for one month. (The original requirement names 01-12-2024 to 31-12-2024; the month is now a setting, see `month` below.)
-4. Write the transfer rates to `Exchage_Rate.csv`, grouped by currency. (The original requirement asks for an Excel file; CSV is used because Excel is not installed. CSV opens in Excel, Google Sheets, or any text editor.)
-5. Email the CSV file to the recipient list.
-
-The URL, currency list, report month, file paths, and email recipients are variables in `config/config.json`, so changing them never requires editing the flow. Exceptions must be handled.
+[`requirements.md`](requirements.md) is the request this flow was built from with an AI assistant: the goal, the steps, which values must be settings, the secret, the output, what to do when something fails, and the schedule. It is a model for writing your own; `kinenix init "Task name"` creates the same sections for a new task.
 
 ## How the flow works
 

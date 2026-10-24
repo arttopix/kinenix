@@ -4,7 +4,7 @@ import os
 import platform
 import sys
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 from . import __version__
 from .models.flow import FlowDefinition
@@ -16,7 +16,7 @@ from .engine.markdown import (
     load_flow,
     markdown_issues,
 )
-from .engine.validation import validate_flow, validate_subflows
+from .engine.validation import leftover_json_flows, validate_flow, validate_subflows
 from .scaffold import (
     DEFAULT_EXAMPLE,
     EXAMPLES_DIR,
@@ -25,6 +25,7 @@ from .scaffold import (
     create_new_project,
     create_project,
     project_folder_name,
+    update_agent_instructions,
 )
 from .workspace import (
     configured_flows_dir,
@@ -36,6 +37,21 @@ from .workspace import (
 )
 
 
+def override_config(name: str, flow_dir: Path) -> Dict[str, Any]:
+    """The settings of `kinenix run --config FILE`: a JSON object, found as given or in the flow's folder (#106)."""
+    candidates = [Path(name), flow_dir / name]
+    path = next((p for p in candidates if p.is_file()), None)
+    if path is None:
+        raise ValueError(f"--config: '{name}' was not found (looked in the current folder and in {flow_dir}).")
+    try:
+        data = json.loads(path.read_text(encoding="utf-8-sig"))
+    except ValueError as e:
+        raise ValueError(f"--config: {path} is not valid JSON: {e}") from None
+    if not isinstance(data, dict):
+        raise ValueError(f"--config: {path} must hold a JSON object of settings, like config/config.json.")
+    return data
+
+
 def report_validation(flow: FlowDefinition, md_path: Optional[Path] = None) -> List[str]:
     """Print validation problems as warnings and return them; with md_path, also lines flow.md ignores
     and problems in the subflows of that bundle."""
@@ -45,6 +61,7 @@ def report_validation(flow: FlowDefinition, md_path: Optional[Path] = None) -> L
     issues.extend(validate_flow(flow))
     if md_path is not None:
         issues.extend(validate_subflows(flow, md_path.parent))
+        issues.extend(leftover_json_flows(md_path))
     for issue in issues:
         print(f"Warning: {issue}", file=sys.stderr)
     return issues
@@ -173,6 +190,9 @@ def main():
     run_parser = subparsers.add_parser("run", help="Run an RPA Flow by name or path (e.g. 'kinenix run rpachallenge')")
     run_parser.add_argument("flow_file", help="Flow name, bundle folder, or path to a flow.md file")
     run_parser.add_argument("--vars", help="Optional JSON string of variables to override", default=None)
+    run_parser.add_argument("--config", dest="config_file", default=None,
+                            help="A JSON file whose keys replace the same keys of config/config.json for this run, "
+                                 "for example config/test.json pointing to saved pages (relative to the flow's folder)")
     run_parser.add_argument("--log-dir", help="Directory to save execution JSON logs (default: auto-detected project root 'logs/')", default=None)
     run_parser.add_argument("--hub", "--orchestrator", dest="hub", help="Optional Hub URL to transmit telemetry (e.g. http://localhost:8080); --orchestrator is the name from before the rename to Hub", default=None)
     run_parser.add_argument("--worker-id", help="Identifier for this worker node (default: local-worker)", default=None)
@@ -186,6 +206,9 @@ def main():
     init_parser.add_argument("--example", "-e", default=None,
                              help="Copy a complete example instead of starting a new task; see --list")
     init_parser.add_argument("--list", action="store_true", help="List the available examples")
+    init_parser.add_argument("--update-agents", action="store_true",
+                             help="Rewrite AGENTS.md and CLAUDE.md of an existing project (NAME is its folder or "
+                                  "flow name; default: the current folder) from the current template")
 
     # Command: flows-dir
     flows_dir_parser = subparsers.add_parser("flows-dir", help="Show or set the folder where your flows are kept")
@@ -301,6 +324,23 @@ def main():
                 note = "  [needs a browser and internet]" if needs_browser else ""
                 print(f"  {name:<14}{description}{note}")
             print('\nFor a new task of your own: kinenix init "Task name"')
+            sys.exit(0)
+
+        if args.update_agents:
+            # An existing project: its folder, a flow name, or the current folder
+            found = resolve_flow_path(args.name) if args.name else None
+            project = found.parent if found else Path(args.name or ".")
+            try:
+                written = update_agent_instructions(project)
+            except ValueError as e:
+                print(f"Error: {e}", file=sys.stderr)
+                sys.exit(1)
+            if not written:
+                print(f"AGENTS.md and CLAUDE.md in {project.resolve()} are already current.")
+            for path in written:
+                print(f"Updated {path}")
+            if (project / "AGENTS.md.bak").is_file() and written:
+                print("The previous AGENTS.md is in AGENTS.md.bak; copy back anything specific to this project.")
             sys.exit(0)
 
         if not args.example and not args.name:
@@ -489,6 +529,14 @@ def main():
                 extra_vars = json.loads(args.vars)
             except Exception as e:
                 print(f"Error parsing --vars JSON: {str(e)}", file=sys.stderr)
+                sys.exit(1)
+
+        if args.config_file:
+            try:
+                extra_vars["config"] = {**override_config(args.config_file, resolved_path.parent),
+                                        **(extra_vars.get("config") or {})}
+            except ValueError as e:
+                print(f"Error: {e}", file=sys.stderr)
                 sys.exit(1)
 
         extra_vars["__flow_dir__"] = str(resolved_path.parent)

@@ -15,6 +15,10 @@ Malee,"Hello, Malee!"
 Alex,"Hello, Alex!"
 ```
 
+## Requirements
+
+[`requirements.md`](requirements.md) says what this flow must do, in the sections you fill in for your own task after `kinenix init "Task name"`. Compare it with `flow.md`: the list of names and the greeting became settings in `config/config.json`, and "stop when there is nobody to greet" became step 2.
+
 ## Try changing it
 
 - **Change the data:** edit `names` or `greeting` in `config/config.json` and run again. The flow itself does not change.
