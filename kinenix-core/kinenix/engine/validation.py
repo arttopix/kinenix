@@ -45,6 +45,24 @@ def _on_error(step: Step) -> str:
     return str(step.error_handler.on_error).strip().lower() if step.error_handler else ""
 
 
+def leftover_json_flows(md_path: Path) -> List[str]:
+    """
+    flow.json next to flow.md, or a subflow .json next to its .md: Kinenix reads only the .md files, so these are
+    leftovers from Kinenix 0.2.0b3 or older, or written by an assistant following old docs (#105).
+    """
+    if md_path.name != "flow.md":
+        return []
+    bundle = md_path.parent
+    found = [bundle / "flow.json"] if (bundle / "flow.json").is_file() else []
+    subflows = bundle / "subflows"
+    if subflows.is_dir():
+        found += sorted(p for p in subflows.glob("*.json") if p.with_suffix(".md").is_file())
+    return [f"{p.relative_to(bundle).as_posix()} is not read: flows are .md files, and "
+            f"{p.with_suffix('.md').relative_to(bundle).as_posix()} is the one that runs. Delete the .json file "
+            f"so nobody edits it by mistake. If the project's AGENTS.md still describes JSON flows, refresh it "
+            f"with: kinenix init --update-agents {bundle}" for p in found]
+
+
 def _all_steps(flow: FlowDefinition) -> List[Step]:
     """Steps, On Error, and Finally, in that order."""
     return list(flow.steps) + list(flow.on_error_steps or []) + list(flow.finally_steps or [])

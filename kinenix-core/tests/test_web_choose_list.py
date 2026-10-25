@@ -197,3 +197,47 @@ def test_more_pages_than_max_pages_is_an_error(pages):
 - **max_pages:** 2
 """, pages["paged"])
     assert context.has_error and "more than max_pages (2) pages" in context.failure_details.error_message
+
+
+def test_loose_match_ignores_spaces_marks_and_case(pages):
+    # #107: people write HRV, hr-v, or HR V; the site says HR-V
+    context = _ok(_run("""### 2. Brand (`web.choose`)
+- **selector:** `[data-testid=carBrand]`
+- **option:** honda
+- **match:** loose
+- **output_var:** `brand`
+
+### 3. Model (`web.choose`)
+- **selector:** `#model`
+- **option:** ${config.model}
+- **match:** loose
+- **search:** true
+- **search_text:** hr
+- **output_var:** `model`
+
+### 4. City (`web.choose`)
+- **selector:** `#native`
+- **option:** chiangmai
+- **match:** loose
+""", pages["dropdowns"], {"model": "HRV"}))
+    assert context.get_variable("brand")["option"] == "HONDA"  # not HONDA BIGWING
+    assert context.get_variable("model")["option"] == "HR-V"
+
+
+@pytest.mark.parametrize("steps, message", [
+    ("- **selector:** `#model`\n- **option:** HRV\n- **match:** loose\n- **search:** true\n- **timeout:** 1500",
+     "the search box shows no options for 'HRV'"),  # the site's own filter hides HR-V when HRV is typed
+    ("- **selector:** `[data-testid=carBrand]`\n- **option:** HONDA\n- **match:** fuzzy", "match 'fuzzy' is not one of"),
+])
+def test_loose_match_problems(pages, steps, message):
+    context = _run(f"### 2. Choose (`web.choose`)\n{steps}\n", pages["dropdowns"])
+    assert context.has_error and message in context.failure_details.error_message
+
+
+def test_several_loose_matches_are_an_error_not_a_guess():
+    from kinenix.actions.web_playwright import _choose_label
+    with pytest.raises(ValueError, match="matches several options loosely: HR-V, H.R.V; give the exact name"):
+        _choose_label(["HR-V", "H.R.V", "CITY"], "hrv", "loose")
+    assert _choose_label(["HR-V", "H.R.V"], "HR-V", "loose") == "HR-V"  # an exact name wins
+    assert _choose_label(["CITY", "CITY HATCHBACK"], "city", "loose") == "CITY"
+    assert _choose_label(["CITY HATCHBACK"], "hatch", "contains") == "CITY HATCHBACK"

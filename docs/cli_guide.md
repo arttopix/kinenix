@@ -82,7 +82,16 @@ kinenix run demo
 | `bot_fx_rate` | Bank of Thailand transfer rates for chosen currencies and dates to CSV, with email (needs a browser) |
 | `rpachallenge` | Fills the RPA Challenge form from an Excel file (needs a browser) |
 
-The examples are copies of `flows/examples/` in the repository, kept identical by `.github/scripts/sync_examples.py` and a test.
+The examples are copies of `flows/examples/` in the repository, kept identical by `.github/scripts/sync_examples.py` and a test. Each has the `requirements.md` it was built from, as a model for your own.
+
+**To refresh the AI assistant instructions of an older project**, so its assistant follows the current rules (for example `on_error: next_item`, no `flow.json`):
+
+```powershell
+kinenix init --update-agents                 # the project in the current folder
+kinenix init tiph_quotes --update-agents     # a project by name or folder
+```
+
+It rewrites `AGENTS.md` and `CLAUDE.md` from the current template with the project's title; a changed `AGENTS.md` is kept as `AGENTS.md.bak`, to copy back anything specific to the project. `kinenix validate` suggests it when it finds a leftover `flow.json`.
 
 ### 2.4 Show or Change the Flows Folder (`flows-dir`)
 
@@ -134,6 +143,12 @@ kinenix run rpachallenge --vars "{\"target_url\": \"https://rpachallenge.com/\"}
 ```
 
 Inside the flow, these variables can be accessed using the standard expression syntax `${target_url}`.
+
+**Another settings file for one run (`--config`):** the keys of the file replace the same keys of `config/config.json`, for example to point a flow at saved pages for a test ([project_bundles.md, Testing Against Saved Pages](project_bundles.md#4-testing-against-saved-pages)). The path is relative to the current folder or the flow's folder:
+
+```powershell
+kinenix run tiph_quotes --config config/test.json
+```
 
 ### 3.2 Custom Log Directory (`--log-dir`)
 By default, Kinenix automatically detects the project root and writes structured JSON logs into `<project_root>/logs/`. You can override this location using `--log-dir`:
