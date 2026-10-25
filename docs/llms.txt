@@ -1,0 +1,37 @@
+# Kinenix
+
+> Kinenix is an open-source RPA framework in Python that runs on the user's own machines. An automation is a flow project: the task described in plain language in `requirements.md`, the flow written in Markdown in `flow.md` (usually by an AI assistant), settings in `config/config.json`, and secrets in `.env`. `kinenix run` runs it; unattended workers run it on a schedule and report to a self-hosted Hub.
+
+How an AI assistant builds a flow:
+
+1. Read `requirements.md` and the project's `AGENTS.md` (created by `kinenix init`; it holds the rules below in full).
+2. Write `flow.md` as Markdown steps: `### N. Step Name (`action.name`)` followed by `- **parameter:** value` bullets. There is no `flow.json`.
+3. Put changeable values in `config/config.json` (read as `${config.name}`) and secrets only in `.env` (read as `${env.NAME}`).
+4. Run `kinenix actions` for the exact parameters of every action; do not guess parameter names.
+5. Run `kinenix validate .` and fix every problem, then `kinenix run .` and read the log.
+
+Expressions in `${...}` are a fixed, safe set of functions (no code runs). Business data stays local: do not send page content or flow data to cloud services unless the task asks for it.
+
+## Build flows
+
+- [Flow Markdown specification](https://www.kinenix.com/flow_markdown_spec/): the `flow.md` format: steps, parameters, loops, conditions, expressions, `on_error` (`continue`, `next_item`), `## On Error` and `## Finally`, `${error}` and `${run}`
+- [Actions reference](https://www.kinenix.com/actions_reference/): every action (web, Excel and CSV, files, logic, dates, HTTP, subflows, e-mail, local AI) with its parameters and a `flow.md` example
+- [Project bundles](https://www.kinenix.com/project_bundles/): the project folder, `config.json`, `.env`, subflows with `flow.call`, and testing a flow against saved pages with `kinenix run --config`
+- [CLI guide](https://www.kinenix.com/cli_guide/): `kinenix init`, `run`, `validate`, `actions`, `list`, and their options
+
+## Start
+
+- [Quickstart](https://www.kinenix.com/quickstart/): install, create a project for a task, build it with an AI assistant, run it, and connect a worker
+- [Examples](https://github.com/arttopix/kinenix/tree/main/flows/examples): complete projects, each with the `requirements.md` it implements; `kinenix init --list` shows them and `kinenix init NAME --example hello` copies one
+
+## Run and operate
+
+- [Hub](https://www.kinenix.com/hub/): the Hub, connecting workers (`kinenix connect`), the dashboard, and why a run does not appear there
+- [Hub data](https://www.kinenix.com/hub_data/): tables and views of run records, for answering questions about runs with `kinenix hub query`
+- [Logging](https://www.kinenix.com/logging/): the execution log format, failure causes, and redaction of secrets and personal data
+
+## Optional
+
+- [Architecture](https://www.kinenix.com/architecture/): modules and design principles
+- [Roadmap](https://www.kinenix.com/roadmap/): what is built, what is planned, and the release milestones
+- [Changelog](https://github.com/arttopix/kinenix/blob/main/CHANGELOG.md): changes and upgrade notes of each release
