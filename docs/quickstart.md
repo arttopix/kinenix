@@ -155,6 +155,7 @@ A run that does not show up: [Hub guide, How Machines Connect, and Troubleshooti
 | Goal | Read |
 | :--- | :--- |
 | Build a first flow with an AI assistant, step by step | [Tutorial](tutorial.md) |
+| Complete projects to copy and adapt | [Examples](examples.md) |
 | Write your own flows | [Flow Markdown specification](flow_markdown_spec.md), [actions reference](actions_reference.md) |
 | Bundles, config, secrets in `.env`, subflows | [Project bundles](project_bundles.md) |
 | All `kinenix` commands | [CLI guide](cli_guide.md) |

@@ -106,11 +106,11 @@ Docs and release:
 
 Examples:
 - [ ] `docs/tutorial.md` and the `first_flow` example: a reader with an AI assistant gets from `kinenix init --example first_flow` to a passing run and a failure read on purpose; tried with two different assistants
-- [ ] `quote_requests` has the `requirements.md` it was built from (a test checks every example has one), a README (the business story, input, output, how to run, how long it takes), fake sample data only, `> Requires:`, `redact` for personal fields, `## On Error` and `## Finally`, and passes `kinenix validate`
-- [ ] Both ship with the package (`kinenix init --example`) and appear in a new `docs/examples.md` that says which patterns each shows
+- [x] `quote_requests` has the `requirements.md` it was built from (a test checks every example has one), a README (the business story, input, output, how to run, how long it takes), fake sample data only, `> Requires:`, `redact` for personal fields, `## On Error` and `## Finally`, and passes `kinenix validate`
+- [x] Both ship with the package (`kinenix init --example`) and appear in a new `docs/examples.md` that says which patterns each shows
 
 Automated:
-- [ ] A CI job runs every offline example end to end in Chromium, headless, and checks its outputs (rows written, items failed); the tutorial's solution included
+- [x] CI runs every offline example end to end in Chromium, headless, and checks its outputs (rows written, items failed); the tutorial's solution included (in the kinenix-core test suite: `test_tutorial.py`, `test_quote_requests_example.py`, and `hello` in `test_scaffold.py`)
 
 Release:
 - [ ] CHANGELOG entry; TestPyPI checked; tag `v0.5.0b1`; PyPI checked; then the kinenix-web branch that links `llms.txt` is merged

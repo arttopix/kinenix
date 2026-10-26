@@ -26,6 +26,7 @@ Each topic has one owning document. Other files link here instead of repeating t
 
 | Document | Covers |
 | :--- | :--- |
+| [examples.md](examples.md) | The examples that ship with Kinenix, what each does, and which patterns it shows |
 | [tutorial.md](tutorial.md) | Tutorial: build a first flow from `requirements.md` with an AI assistant, validate, run, and break it on purpose (the `first_flow` example) |
 | [quickstart.md](quickstart.md) | Install, create a project with `kinenix init`, run it, and connect a worker to the Hub in about ten minutes |
 | [cli_guide.md](cli_guide.md) | `kinenix` commands and options |
