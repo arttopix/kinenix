@@ -15,7 +15,7 @@ from typing import Dict, List
 REPO_ROOT = Path(__file__).resolve().parents[2]
 SOURCE = REPO_ROOT / "flows" / "examples"
 TARGET = REPO_ROOT / "kinenix-core" / "kinenix" / "examples"
-EXAMPLES = ("hello", "bot_fx_rate", "rpachallenge", "first_flow")
+EXAMPLES = ("hello", "bot_fx_rate", "rpachallenge", "first_flow", "quote_requests")
 ASSET_SUFFIXES = (".xlsx", ".xls", ".csv", ".txt", ".pdf")
 
 
@@ -33,7 +33,10 @@ def expected_files(name: str) -> Dict[str, Path]:
     for name in ("AGENTS.md", "CLAUDE.md"):
         if (src / name).is_file():
             files[name] = src / name
-    for pattern in ("config/*.json", "tests/pages/*.html", "solution/*.md"):
+    # Package data skips dotfiles, so .env.example is packaged as env.example (scaffold.DOTFILE_NAMES restores it)
+    if (src / ".env.example").is_file():
+        files["env.example"] = src / ".env.example"
+    for pattern in ("config/*.json", "tests/pages/*.html", "solution/*.md", "input/*.csv"):
         for path in sorted(src.glob(pattern)):
             rel = path.relative_to(src).as_posix()
             if rel not in ("config/config.json", "config/config.template.json"):

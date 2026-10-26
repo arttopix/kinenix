@@ -73,7 +73,10 @@ def test_existing_folder_rules(tmp_path):
         scaffold.create_project(tmp_path / "x", "nope")
 
 
-def test_every_example_creates_a_valid_project(tmp_path):
+def test_every_example_creates_a_valid_project(tmp_path, monkeypatch):
+    # Examples describe the version being developed, which their `> Requires:` may name
+    from kinenix.engine import requires
+    monkeypatch.setattr(requires, "__version__", "999.0")
     for name, _, _ in scaffold.available_examples():
         project = scaffold.create_project(tmp_path / name, name)
         assert validate_flow(load_flow(project / "flow.md")) == [], name

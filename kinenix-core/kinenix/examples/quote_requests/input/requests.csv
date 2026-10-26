@@ -1,0 +1,6 @@
+request_id,customer_name,insurance_class,year,brand,model,sub_model,repair
+R001,Somchai Jaidee,Class 1,2023,HONDA,HR-V,e:HEV E 1.5,Garage
+R002,Malee Srisuk,Class 2+,2022,TOYOTA,YARIS ATIV,1.2 Premium,
+R003,Anan Rakthai,Class 1,2024,HONDA,HRV,e:HEV RS,Dealer
+R004,Pranee Wongdee,Class 3,2021,MAZDA,CX-30,2.0 S,
+R005,Kittipong Mankhong,Class 1,2023,TOYOTA,COROLLA CROSS,,Garage

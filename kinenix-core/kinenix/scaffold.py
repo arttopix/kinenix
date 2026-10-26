@@ -128,4 +128,7 @@ def create_project(target: Path, example: str = DEFAULT_EXAMPLE) -> Path:
 
     target = _check_target(target)
     shutil.copytree(source, target, dirs_exist_ok=True, ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
+    for packaged, name in DOTFILE_NAMES.items():
+        if (target / packaged).is_file():
+            (target / packaged).rename(target / name)
     return target
