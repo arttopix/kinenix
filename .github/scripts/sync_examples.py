@@ -5,7 +5,7 @@ Usage:
     python .github/scripts/sync_examples.py --check   report differences without writing (exit 1 when out of date)
 
 flows/examples/ is the source. The package holds a copy because pip installs only what is inside the package.
-Per example, the copy contains flow.md, README.md, requirements.md, the config template as config/config.json,
+Per example, the copy contains flow.md, README.md, requirements.md, AGENTS.md and CLAUDE.md when present, other config/*.json files, saved test pages, the tutorial solution, the config template as config/config.json,
 subflows/*.md, and input data in assets/ (screenshots and other outputs are left out).
 """
 import sys
@@ -15,7 +15,7 @@ from typing import Dict, List
 REPO_ROOT = Path(__file__).resolve().parents[2]
 SOURCE = REPO_ROOT / "flows" / "examples"
 TARGET = REPO_ROOT / "kinenix-core" / "kinenix" / "examples"
-EXAMPLES = ("hello", "bot_fx_rate", "rpachallenge")
+EXAMPLES = ("hello", "bot_fx_rate", "rpachallenge", "first_flow")
 ASSET_SUFFIXES = (".xlsx", ".xls", ".csv", ".txt", ".pdf")
 
 
@@ -28,6 +28,16 @@ def expected_files(name: str) -> Dict[str, Path]:
         "requirements.md": src / "requirements.md",
         "config/config.json": src / "config" / "config.template.json",
     }
+    # Instructions for AI assistants, other settings files (config/empty.json of the tutorial), saved pages for
+    # testing, and the tutorial's solution
+    for name in ("AGENTS.md", "CLAUDE.md"):
+        if (src / name).is_file():
+            files[name] = src / name
+    for pattern in ("config/*.json", "tests/pages/*.html", "solution/*.md"):
+        for path in sorted(src.glob(pattern)):
+            rel = path.relative_to(src).as_posix()
+            if rel not in ("config/config.json", "config/config.template.json"):
+                files[rel] = path
     subflows = src / "subflows"
     if subflows.is_dir():
         for path in sorted(subflows.glob("*.md")):

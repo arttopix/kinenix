@@ -46,3 +46,6 @@ kinenix-hub/tests/eval/results/
 
 # Flows are flow.md files; Kinenix 0.2.0b3 and older wrote a flow.json next to them
 flows/**/flow.json
+
+# Personal VS Code workspace files (folders, settings of one machine)
+*.code-workspace

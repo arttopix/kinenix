@@ -95,30 +95,25 @@ Docs and release:
 
 **Goal:** show and prove that Kinenix does real business work end to end. Each example is a complete project someone can copy and adapt, runs without internet against sample data and local pages, and is run by CI and on real machines for days. These examples are the gate that 1.0.0 must keep passing.
 
-**Scope:** three new example projects, an end-to-end CI job with a real browser, failure-injection tests, and a soak test on the Raspberry Pi worker. From the 0.4.0b1 field test: #105 (leftover JSON flows, refreshing a project's AGENTS.md), #106 (testing a flow against saved pages with `kinenix run --config`), #107 (`web.choose` with `match: loose`).
+**Scope** (narrowed on 2026-10-26 to keep 1.0.0 on 2026-11-03): the first-flow tutorial (#117), one business example (`quote_requests`), and an end-to-end CI job with a real browser. From the 0.4.0b1 field test: #105 (leftover JSON flows, refreshing a project's AGENTS.md), #106 (testing a flow against saved pages with `kinenix run --config`), #107 (`web.choose` with `match: loose`), and #119 (`llms.txt`). The other two examples, the failure-injection tests, and the 48-hour soak moved to 1.0.0.
 
-| Example | Business story | Patterns it proves |
+| Example | Story | Patterns it proves |
 | :--- | :--- | :--- |
-| `invoice_check` | A folder of supplier invoices (Excel) is checked: totals, duplicates, missing PO numbers. Good invoices go to a summary workbook, bad ones to an exceptions list, processed files are moved, and the output is zipped and e-mailed | `file.list` loops with `item_label`, expressions, `flow.fail` per item with `on_error: next_item`, On Error and Finally, `file.zip`, `email.send` |
-| `quote_requests` | Requests from a CSV are entered one by one into a quote form (a local copy of a modern insurance site), the offered packages are read, and a results file plus a list of failed requests is e-mailed | subflow per item, `web.goto`, `web.choose`, `web.get_list`, `${error.loop.item}`, screenshots on failure |
-| `daily_sales_report` | A sales table is read from a portal (local pages), compared with targets from Excel, and the differences are reported; it runs on a worker schedule and reports to the Hub | `web.get_table`, expressions, `kinenix-worker schedule`, `kinenix hub report` |
+| `first_flow` (tutorial) | A made-up shop's catalog (saved pages) is read into CSV, and the products over a budget are listed. The project starts with `requirements.md` and an empty `flow.md`; the reader's AI assistant builds the flow, following `docs/tutorial.md` | The Kinenix way of working: requirements, assistant, `validate`, `run`, a failure read on purpose; `web.get_list` with paging, expressions, `flow.fail`, Finally |
+| `quote_requests` | Requests from a CSV are entered one by one into a quote form (a local copy of a modern insurance site), the offered packages are read, and a results file plus a list of failed requests is e-mailed | subflow per item, `web.goto`, `web.choose`, `web.get_list`, `on_error: next_item`, `${error.loop.item}`, screenshots on failure |
 
 **Exit criteria**
 
 Examples:
-- [ ] Each example has the `requirements.md` it was built from, in the sections of `kinenix init` (a test checks every example; the four existing examples have one), a README (the business story, input, output, how to run, how long it takes), fake sample data only, `> Requires:`, `redact` for personal fields, `## On Error` and `## Finally`, and passes `kinenix validate`
-- [ ] Each ships with the package (`kinenix init --example`) and appears in a new `docs/examples.md` that says which patterns it shows
+- [ ] `docs/tutorial.md` and the `first_flow` example: a reader with an AI assistant gets from `kinenix init --example first_flow` to a passing run and a failure read on purpose; tried with two different assistants
+- [ ] `quote_requests` has the `requirements.md` it was built from (a test checks every example has one), a README (the business story, input, output, how to run, how long it takes), fake sample data only, `> Requires:`, `redact` for personal fields, `## On Error` and `## Finally`, and passes `kinenix validate`
+- [ ] Both ship with the package (`kinenix init --example`) and appear in a new `docs/examples.md` that says which patterns each shows
 
 Automated:
-- [ ] A new CI job installs Chromium and runs every offline example end to end, headless, and checks its outputs (rows written, items failed, files moved); it gates every pull request from now on
-- [ ] Failure-injection tests: the Hub is down or slow during a run (the run completes, the log is kept, one warning); an input file is missing; the browser closes in the middle of a loop (Finally still runs, no browser process is left)
-
-Field test (soak):
-- [ ] The Raspberry Pi worker runs the offline examples every 30 minutes for 48 hours and reports to the Ubuntu Hub: no failure caused by Kinenix, memory does not grow, no browser process is left behind, and `report`, `logs`, and `query` answer correctly
-- [ ] A baseline is written in `docs/examples.md`: time and memory of a 100-item loop on the Raspberry Pi
+- [ ] A CI job runs every offline example end to end in Chromium, headless, and checks its outputs (rows written, items failed); the tutorial's solution included
 
 Release:
-- [ ] CHANGELOG entry; TestPyPI checked; tag `v0.5.0b1`; PyPI checked
+- [ ] CHANGELOG entry; TestPyPI checked; tag `v0.5.0b1`; PyPI checked; then the kinenix-web branch that links `llms.txt` is merged
 
 **Compatibility:** nothing changes for existing flows; this milestone adds examples and tests. Bugs found by the examples are fixed here.
 
@@ -142,8 +137,14 @@ Before the release candidate:
 - [ ] `docs/releasing.md` installs from TestPyPI without its broken copies of other packages
 - [ ] Release `1.0.0rc1`
 
-Check of 1.0.0rc1, one day (the long soak is in 0.5.0b1):
-- [ ] The 0.5.0b1 examples pass in CI and on the Raspberry Pi worker with the release candidate, and `bot_fx_rate` runs on its cron schedule
+Examples and reliability (moved from 0.5.0b1):
+- [ ] `invoice_check`: a folder of supplier invoices (Excel) is checked for totals, duplicates, and missing PO numbers; good ones go to a summary workbook, bad ones to an exceptions list, files are moved, and the output is zipped and e-mailed (`file.list` with `item_label`, `on_error: next_item`, On Error and Finally, `file.zip`, `email.send`)
+- [ ] `daily_sales_report`: a sales table read from a portal (local pages) is compared with targets from Excel and the differences reported, on a worker schedule that reports to the Hub (`web.get_table`, expressions, `kinenix-worker schedule`, `kinenix hub report`)
+- [ ] Failure-injection tests: the Hub is down or slow during a run (the run completes, the log is kept, one warning); an input file is missing; the browser closes in the middle of a loop (Finally still runs, no browser process is left)
+- [ ] Soak: the Raspberry Pi worker runs the offline examples every 30 minutes for 48 hours and reports to the Ubuntu Hub: no failure caused by Kinenix, memory does not grow, no browser process is left behind, and `report`, `logs`, and `query` answer correctly; a baseline (time and memory of a 100-item loop on the Raspberry Pi) is written in `docs/examples.md`
+
+Check of 1.0.0rc1, one day:
+- [ ] The examples pass in CI and on the Raspberry Pi worker with the release candidate, and `bot_fx_rate` runs on its cron schedule
 - [ ] Ubuntu Hub: every run and failure is recorded, and `report`, `logs`, and `query` answer correctly
 - [ ] Windows: a Hub database from 0.2.0b3 upgrades with no data lost
 - [ ] Only bug fixes after the release candidate

@@ -108,7 +108,7 @@ def discover_flows() -> Dict[str, Tuple[Path, str]]:
         # 1. Discover Self-Contained Project Bundles (directories with a flow.md)
         for flow_file in search_dir.glob("**/flow.md"):
             parts = flow_file.parts
-            if any(p.startswith(".") or p in ["__pycache__", "subflows", "node_modules", ".venv", "venv"] for p in parts):
+            if any(p.startswith(".") or p in ["__pycache__", "subflows", "solution", "node_modules", ".venv", "venv"] for p in parts):
                 continue
             # The templates for `kinenix init` are not runnable projects; running one would write into the package
             if EXAMPLES_DIR in flow_file.resolve().parents or NEW_PROJECT_TEMPLATE in flow_file.resolve().parents:
