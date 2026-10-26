@@ -1,0 +1,5 @@
+{
+  "catalog_url": "tests/pages/catalog.html",
+  "budget": 500,
+  "headless": false
+}
