@@ -25,7 +25,6 @@ kinenix list
 | `flow.md` | The flow. It has one placeholder step; the assistant replaces it |
 | `config/config.json` | Values that change without editing the flow: the catalog address, the budget |
 | `tests/pages/` | The shop's catalog pages, saved so the tutorial works offline |
-| `solution/flow.md` | A finished flow, to compare with yours at the end |
 
 Open `tests/pages/catalog.html` in your browser: ten products on two pages, with a "Next page" link.
 
@@ -88,7 +87,7 @@ A browser window opens (set `"headless": true` in `config/config.json` to hide i
 - `over_budget.csv`: the five products above 500 THB
 - `summary.txt`: `10 products read, 5 over the budget of 500 THB.`
 
-Every run also writes a log under `logs/`, with each step, its result, and how long it took ([logging.md](logging.md)).
+Every run also writes a log, with each step, its result, and how long it took ([logging.md](logging.md)), under `logs/<flow name>/<date>/` of the git repository you run the command in (your flows folder when it is one), otherwise of the current folder; `kinenix run --log-dir PATH` puts it elsewhere. The run's last lines in the terminal show the path.
 
 ## 6. Break it on purpose
 
@@ -109,15 +108,15 @@ Put the pages back as they were afterwards (or copy them again with `kinenix ini
 
 ## 7. Compare with the solution
 
-Open `solution/flow.md`. Your assistant's flow does not need to be the same; check that it does the same things:
+The solution is not in your project, so the assistant could not copy it: [solution/flow.md](https://github.com/arttopix/kinenix/blob/main/flows/examples/first_flow/solution/flow.md) in the Kinenix repository. Your assistant's flow does not need to be the same; check that it does the same things:
 
 - reads both pages (`web.get_list` with `next_selector: a.next`);
 - keeps the price as a number (`numeric_fields`);
 - stops on an empty catalog with a message (`flow.fail` with a condition);
-- finds the products over the budget in a loop with a condition, and writes the second file only when there are any;
+- finds the products over the budget in a loop with a condition, and writes the second file only when there are any, after removing last month's (`file.delete` with `missing_ok`);
 - closes the browser in `## Finally`, so it is closed also after a failure.
 
-To run the solution itself, copy `solution/flow.md` over `flow.md` and run again.
+To run the solution itself, save it over your `flow.md` and run again.
 
 ## 8. Next steps
 

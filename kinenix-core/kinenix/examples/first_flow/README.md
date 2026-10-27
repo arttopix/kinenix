@@ -18,6 +18,5 @@ kinenix init my-first-flow --example first_flow
 | `config/config.json` | The catalog address, the budget, and whether the browser window is shown |
 | `config/empty.json` | Settings for the "break it on purpose" step: an empty catalog |
 | `tests/pages/` | The made-up shop's catalog: two pages of products and an empty page |
-| `solution/flow.md` | One possible solution; open it after you have tried |
 
-To run the solution: copy `solution/flow.md` over `flow.md`, then `kinenix run my-first-flow`.
+A solution is not in this folder, so your assistant builds the flow instead of copying one. After you have tried, compare with the solution in the repository: https://github.com/arttopix/kinenix/blob/main/flows/examples/first_flow/solution/flow.md

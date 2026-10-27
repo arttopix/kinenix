@@ -108,10 +108,9 @@ def available_examples() -> List[Tuple[str, str, bool]]:
     found = []
     for folder in sorted(p for p in EXAMPLES_DIR.iterdir() if (p / "flow.md").is_file()):
         flow = markdown_to_flow((folder / "flow.md").read_text(encoding="utf-8-sig"))
-        # A tutorial ships an empty flow.md; its solution shows what the finished flow needs
-        flows = [flow] + [markdown_to_flow(p.read_text(encoding="utf-8-sig"))
-                          for p in sorted(folder.glob("solution/*.md"))]
-        needs_browser = any(step.action.startswith("web.") for f in flows for step in _walk(f.steps))
+        # A tutorial ships an empty flow.md; its saved web pages show that the finished flow uses a browser
+        needs_browser = (any(step.action.startswith("web.") for step in _walk(flow.steps))
+                         or (folder / "tests" / "pages").is_dir())
         found.append((folder.name, flow.description or flow.name, needs_browser))
     return sorted(found, key=lambda item: (item[0] != DEFAULT_EXAMPLE, item[0]))
 
