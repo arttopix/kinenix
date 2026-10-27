@@ -1,5 +1,5 @@
 # Office Supply Prices
-> Description: Tutorial: build this flow from requirements.md with your AI assistant (no browser needed until you run it; the catalog pages are saved in tests/pages).
+> Description: Tutorial: your AI assistant builds this flow from requirements.md; the shop's pages are saved in tests/pages.
 > Version: 0.1.0
 
 ## Steps

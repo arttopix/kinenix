@@ -321,8 +321,10 @@ def main():
         if args.list:
             print("Examples (kinenix init <folder> --example <name>):\n")
             for name, description, needs_browser in examples:
-                note = "  [needs a browser and internet]" if needs_browser else ""
-                print(f"  {name:<14}{description}{note}")
+                # Examples with their pages saved in tests/pages run without internet
+                offline = (EXAMPLES_DIR / name / "tests" / "pages").is_dir()
+                note = ("  [needs a browser; runs offline]" if offline else "  [needs a browser and internet]")                     if needs_browser else ""
+                print(f"  {name:<16}{description}{note}")
             print('\nFor a new task of your own: kinenix init "Task name"')
             sys.exit(0)
 

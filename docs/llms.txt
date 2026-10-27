@@ -22,7 +22,7 @@ Expressions in `${...}` are a fixed, safe set of functions (no code runs). Busin
 ## Start
 
 - [Quickstart](https://www.kinenix.com/quickstart/): install, create a project for a task, build it with an AI assistant, run it, and connect a worker
-- [Tutorial](https://www.kinenix.com/tutorial/): a first flow from `requirements.md` to a run, step by step (`kinenix init my-first-flow --example first_flow`), with a solution to compare
+- [Tutorial](https://www.kinenix.com/tutorial/): a first flow from `requirements.md` to a run, step by step (`kinenix init my-first-flow --example first_flow`), with a solution in the repository to compare afterwards
 - [Examples](https://www.kinenix.com/examples/): complete projects, each with the `requirements.md` it implements, and the patterns each shows; `kinenix init --list` shows them and `kinenix init NAME --example hello` copies one
 
 ## Run and operate

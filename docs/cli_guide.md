@@ -82,7 +82,7 @@ kinenix run demo
 | `bot_fx_rate` | Bank of Thailand transfer rates for chosen currencies and dates to CSV, with email (needs a browser) |
 | `rpachallenge` | Fills the RPA Challenge form from an Excel file (needs a browser) |
 | `quote_requests` | Enters quote requests from a CSV into a made-up insurer's form and collects the packages; failed requests are listed with their reasons (needs a browser, no internet) |
-| `first_flow` | The tutorial: finished `requirements.md`, an empty `flow.md` for your AI assistant to build, saved shop pages, and a solution ([tutorial.md](tutorial.md)) |
+| `first_flow` | The tutorial: finished `requirements.md`, an empty `flow.md` for your AI assistant to build, and saved shop pages; the solution stays in the repository so an assistant cannot copy it ([tutorial.md](tutorial.md)) |
 
 The examples are copies of `flows/examples/` in the repository, kept identical by `.github/scripts/sync_examples.py` and a test. Each has the `requirements.md` it was built from, as a model for your own.
 
