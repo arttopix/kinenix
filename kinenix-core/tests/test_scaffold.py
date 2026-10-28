@@ -179,7 +179,7 @@ def test_init_command(tmp_path):
     assert (tmp_path / "fx" / "flow.md").is_file()
 
     again = kinenix("init", "fx", "--example", "hello")
-    assert again.returncode == 1 and "not empty" in again.stderr
+    assert again.returncode == 2 and "not empty" in again.stderr
 
     # With --example the folder name is used as typed, so the documented `init my-bot` then `run my-bot` works
     assert kinenix("init", "my-bot", "--example", "hello").returncode == 0
@@ -193,7 +193,7 @@ def test_init_command(tmp_path):
     assert (tmp_path / "get_stock_data" / "requirements.md").is_file()
 
     nameless = kinenix("init")
-    assert nameless.returncode == 1 and 'kinenix init "Get stock data"' in nameless.stderr
+    assert nameless.returncode == 2 and 'kinenix init "Get stock data"' in nameless.stderr
 
 
 def test_actions_command(tmp_path):
@@ -207,7 +207,7 @@ def test_actions_command(tmp_path):
 
     web = kinenix("actions", "web")
     assert "web.get_table" in web.stdout and "csv.write" not in web.stdout
-    assert kinenix("actions", "nothing").returncode == 1
+    assert kinenix("actions", "nothing").returncode == 7
 
 
 def test_list_names_a_flow_by_its_folder_also_from_inside_it(tmp_path, monkeypatch):

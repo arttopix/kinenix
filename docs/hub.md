@@ -64,6 +64,7 @@ kinenix hub status                                   # http://127.0.0.1:8080
 kinenix hub status --url http://<hub-ip>:8080 --limit 20
 kinenix hub logs                                     # steps of the latest execution
 kinenix hub logs 54f84bd6                            # steps of one execution, by the ID shown in status
+kinenix hub logs 20261028T101500-abcd                # or by the run id that kinenix run prints first
 kinenix hub logs --flow "BOT FX"                     # steps of the latest run of a flow
 kinenix hub report --flow "BOT FX"                   # short report of the latest run of a flow
 kinenix hub report --flow invoice --limit 3          # the last three reports, newest first

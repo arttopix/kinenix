@@ -39,7 +39,7 @@ def test_leftover_json_flows_are_named(tmp_path):
     assert "kinenix init --update-agents" in problems[0]
 
     result = _cli(tmp_path, "validate", "old_bot")
-    assert result.returncode == 1 and "flow.json is not read" in result.stderr
+    assert result.returncode == 4 and "flow.json is not read" in result.stderr
 
 
 def test_update_agents_keeps_the_title_and_the_old_file(tmp_path):
@@ -105,12 +105,12 @@ def test_a_web_flow_runs_against_saved_pages_with_a_test_config(tmp_path, chromi
         assert [(r["Currency"], r["Rate"]) for r in csv.DictReader(f)] == [("USD", "33.1"), ("EUR", "36.45")]
 
 
-@pytest.mark.parametrize("content, message", [
-    (None, "'config/missing.json' was not found"),
-    ("{not json", "is not valid JSON"),
-    ("[1, 2]", "must hold a JSON object"),
+@pytest.mark.parametrize("content, message, code", [
+    (None, "'config/missing.json' was not found", 7),
+    ("{not json", "is not valid JSON", 2),
+    ("[1, 2]", "must hold a JSON object", 2),
 ])
-def test_config_file_problems_stop_before_the_run(tmp_path, content, message):
+def test_config_file_problems_stop_before_the_run(tmp_path, content, message, code):
     bundle = _bundle(tmp_path)
     name = "config/missing.json"
     if content is not None:
@@ -118,4 +118,4 @@ def test_config_file_problems_stop_before_the_run(tmp_path, content, message):
         name = "config/test.json"
         (bundle / name).write_text(content, encoding="utf-8")
     result = _cli(tmp_path, "run", "old_bot", "--config", name)
-    assert result.returncode == 1 and message in result.stderr
+    assert result.returncode == code and message in result.stderr

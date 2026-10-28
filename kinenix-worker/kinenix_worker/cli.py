@@ -1,6 +1,8 @@
 import argparse
 import json
 import sys
+
+from kinenix import exit_codes
 from pathlib import Path
 
 from rich.console import Console
@@ -76,7 +78,7 @@ def main():
         with console.status(f"Contacting {client.url or 'Hub'}..."):
             result = client.ping()
         display.print_ping(console, client, result)
-        sys.exit(0 if result["authorized"] else 1)
+        sys.exit(exit_codes.OK if result["authorized"] else exit_codes.UNREACHABLE)
 
     def start_heartbeats() -> None:
         if client.enabled:
@@ -90,7 +92,7 @@ def main():
                 extra_vars = json.loads(args.vars)
             except Exception as e:
                 print(f"Error parsing --vars JSON: {e}", file=sys.stderr)
-                sys.exit(1)
+                sys.exit(exit_codes.USAGE)
 
         # Keep heartbeats going during long flows so the worker is not shown as offline mid-run
         start_heartbeats()
@@ -103,11 +105,17 @@ def main():
             )
 
             display.print_run_result(console, res)
-            sys.exit(1 if res["has_error"] else 0)
+            sys.exit(res["exit_code"])
 
+        except KeyboardInterrupt:
+            print("\nStopped (Ctrl+C).", file=sys.stderr)
+            sys.exit(exit_codes.INTERRUPTED)
+        except FileNotFoundError as e:
+            print(f"Worker execution failed: {e}", file=sys.stderr)
+            sys.exit(exit_codes.NOT_FOUND)
         except Exception as e:
             print(f"Worker execution failed with error: {e}", file=sys.stderr)
-            sys.exit(1)
+            sys.exit(exit_codes.TECHNICAL)
 
     if args.command == "watch":
         from .triggers.watcher import FileWatcherTrigger
@@ -118,7 +126,7 @@ def main():
                 extra_vars = json.loads(args.vars)
             except Exception as e:
                 print(f"Error parsing --vars JSON: {e}", file=sys.stderr)
-                sys.exit(1)
+                sys.exit(exit_codes.USAGE)
 
         watcher = FileWatcherTrigger(
             watch_dir=args.directory,
@@ -145,7 +153,7 @@ def main():
                 extra_vars = json.loads(args.vars)
             except Exception as e:
                 print(f"Error parsing --vars JSON: {e}", file=sys.stderr)
-                sys.exit(1)
+                sys.exit(exit_codes.USAGE)
 
         try:
             scheduler = CronSchedulerTrigger(
@@ -158,7 +166,7 @@ def main():
             )
         except ValueError as e:
             print(f"Invalid --cron: {e}", file=sys.stderr)
-            sys.exit(1)
+            sys.exit(exit_codes.USAGE)
         print(f"Scheduled flow '{args.flow}' to run {scheduler.describe()}...")
         print("Press Ctrl+C to stop.")
         start_heartbeats()

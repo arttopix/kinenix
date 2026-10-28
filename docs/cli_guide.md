@@ -133,6 +133,28 @@ kinenix run examples/rpachallenge
 kinenix run flows/examples/rpachallenge
 ```
 
+The first line `kinenix run` prints is `Run <run_id>`, for example `Run 20261028T101500-abcd`. The same id is `${run.id}` inside the flow, is part of the log file names, and is shown on the Hub; `kinenix hub logs <run_id>` shows the steps of that run.
+
+### 2.8 Exit Codes
+Every `kinenix` and `kinenix-worker` command ends with one of these codes, so a scheduler, a CI job, or an AI assistant can decide what to do next without reading the output. The codes stay the same for all of 1.x.
+
+| Code | Meaning | Try again? |
+| :--- | :--- | :--- |
+| 0 | Success. A run whose failures were all handled (`on_error: continue` or `next_item`) also ends with 0; its failed items are in the summary and on the Hub | |
+| 1 | The run failed for a technical reason: timeout, element not found, file locked, or a failure in `## Finally` after the steps passed | Often |
+| 2 | Wrong use of the command: unknown option, missing argument, bad `--vars` JSON, a `--config` file that is not a JSON object | No; fix the command |
+| 3 | The run stopped on a business rule (`flow.fail`): the data did not pass | No; the data needs a person |
+| 4 | The flow is invalid: `kinenix validate` problems, an expression error, an unknown action, no steps | No; fix the flow |
+| 5 | The flow needs a newer Kinenix (`> Requires:`) | No; upgrade Kinenix |
+| 6 | The Hub cannot be reached, or refused the key (`kinenix connect`, `kinenix hub status`, `logs`, `query --url`) | Yes, later |
+| 7 | Not found: no such flow, file, example, action, run id, table, or view | No |
+| 130 | Stopped with Ctrl+C | |
+
+```powershell
+kinenix run tiph_quotes
+if ($LASTEXITCODE -eq 3) { Write-Output "The data did not pass; see the run on the Hub" }
+```
+
 ---
 
 ## 3. Command Options & Parameters

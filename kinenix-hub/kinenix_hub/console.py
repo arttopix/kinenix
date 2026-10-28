@@ -318,9 +318,11 @@ def fetch_execution_log(base_url: str, auth: Optional[Tuple[str, str]], id_prefi
         raise LookupError("No executions recorded yet.")
 
     if id_prefix:
-        matches = [e for e in executions if e["id"].startswith(id_prefix)]
+        # The Hub's execution id, or the run id that `kinenix run` prints first (also ${run.id} and log names)
+        matches = [e for e in executions if e["id"].startswith(id_prefix)
+                   or str((e.get("details") or {}).get("run_id") or "").startswith(id_prefix)]
         if not matches:
-            raise LookupError(f"No recent execution ID starts with '{id_prefix}'.")
+            raise LookupError(f"No recent execution or run ID starts with '{id_prefix}'.")
         if len(matches) > 1:
             raise LookupError(f"'{id_prefix}' matches {len(matches)} executions; type more characters of the ID.")
         execution_id = matches[0]["id"]

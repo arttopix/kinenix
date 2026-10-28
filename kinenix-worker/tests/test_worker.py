@@ -1,6 +1,7 @@
 from pathlib import Path
 import pytest
 
+from kinenix import exit_codes
 from kinenix.engine.markdown import flow_to_markdown
 from kinenix_worker.runner import WorkerRunner
 from kinenix.models.flow import FlowDefinition, Step
@@ -44,3 +45,12 @@ def test_worker_execute_simple_flow(tmp_path: Path):
     assert result["steps_executed"] == 1
     assert result["flow_name"] == "Worker Simple Test Flow"
     assert "worker_system" in result
+
+
+def test_worker_result_carries_the_exit_code_and_run_id(tmp_path: Path):
+    flow_file = tmp_path / "flow.md"
+    flow_file.write_text("# Stop\n\n## Steps\n\n### 1. Stop (`flow.fail`)\n- **message:** no data\n", encoding="utf-8")
+    result = WorkerRunner().execute_flow(str(flow_file), log_dir=str(tmp_path / "logs"))
+    assert result["has_error"] is True
+    assert result["exit_code"] == exit_codes.BUSINESS
+    assert result["run_id"] and any(result["run_id"] in p.name for p in (tmp_path / "logs").rglob("*.json*"))

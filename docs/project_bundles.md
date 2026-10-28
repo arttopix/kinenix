@@ -151,6 +151,6 @@ A web flow depends on pages it does not control: a changed button, a new cookie 
    kinenix run tiph_quotes --config config/test.json
    ```
    Each key of the file replaces the same key of `config/config.json` for this run only; a key holding an object, such as `email`, is replaced as a whole. `--vars '{"config": {...}}'` is applied on top, for a one-off change.
-4. **Check the outcome:** `kinenix run` exits with 1 when the run fails; compare the files under `output/` (rows written, failed items in the summary) with what the saved pages should give. Keep the saved pages and the test file in git with the flow, and refresh the pages when the real site changes.
+4. **Check the outcome:** `kinenix run` exits with 1 for a technical failure and 3 when a business rule stopped it ([cli_guide.md, Exit Codes](cli_guide.md#28-exit-codes)); compare the files under `output/` (rows written, failed items in the summary) with what the saved pages should give. Keep the saved pages and the test file in git with the flow, and refresh the pages when the real site changes.
 
 A command that runs such a test and compares the results by itself (`kinenix test`) is planned for 1.2.0.
