@@ -17,7 +17,7 @@ from .engine.markdown import (
     load_flow,
     markdown_issues,
 )
-from .engine.validation import leftover_json_flows, validate_flow, validate_subflows
+from .engine.validation import deprecated_uses, leftover_json_flows, validate_flow, validate_subflows
 from .scaffold import (
     DEFAULT_EXAMPLE,
     EXAMPLES_DIR,
@@ -434,6 +434,8 @@ def main():
             print(f"Error loading flow at '{source}': {e}", file=sys.stderr)
             sys.exit(exit_codes.INVALID_FLOW)
         issues = report_validation(flow_def, md_path=source)
+        for notice in deprecated_uses(flow_def):  # still runs in 1.x, so not counted as a problem
+            print(f"Deprecated: {notice}", file=sys.stderr)
         if issues:
             print(f"{len(issues)} problem(s) in {source}", file=sys.stderr)
             sys.exit(exit_codes.INVALID_FLOW)
@@ -464,6 +466,8 @@ def main():
             sys.exit(exit_codes.INVALID_FLOW)
 
     elif args.command == "export-md":
+        print("Deprecated: kinenix export-md will be removed in Kinenix 2.0; convert any flow.json left from "
+              "0.2.0b3 or older with Kinenix 1.x first.", file=sys.stderr)
         src = Path(args.json_file).resolve()
         if src.is_dir() and (src / "flow.json").is_file():
             src = src / "flow.json"
@@ -508,6 +512,8 @@ def main():
         sys.exit(0)
 
     elif args.command == "run":
+        if any(a == "--orchestrator" or a.startswith("--orchestrator=") for a in sys.argv[1:]):
+            print("Deprecated: --orchestrator is now --hub; the old name will be removed in Kinenix 2.0.", file=sys.stderr)
         resolved_path = resolve_flow_path(args.flow_file)
         if not resolved_path:
             print(f"Error: Could not find flow '{args.flow_file}'.", file=sys.stderr)
@@ -583,7 +589,7 @@ def main():
 
     elif args.command in ("hub", "orchestrator"):
         if args.command == "orchestrator":
-            print("Note: 'kinenix orchestrator' is now 'kinenix hub'; the old name will be removed in a later release.", file=sys.stderr)
+            print("Deprecated: 'kinenix orchestrator' is now 'kinenix hub'; the old name will be removed in Kinenix 2.0.", file=sys.stderr)
         try:
             from rich.console import Console
             from kinenix_hub import config as hub_config

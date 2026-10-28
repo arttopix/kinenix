@@ -380,6 +380,9 @@ class FlowInterpreter:
                     raise ValueError(
                         f"Step '{s_id}' specifies fallback_step_id '{fb_target}' which does not exist in flow definition."
                     )
+        from .validation import deprecated_uses  # imported here: validation imports every action module
+        for notice in deprecated_uses(flow_def):
+            self.logger.logger.warning(f"{flow_def.name}: {notice}")
 
         start_time = local_now()
 
