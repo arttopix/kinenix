@@ -18,7 +18,7 @@ Toward 1.0.0, a `flow.md` written for 1.0 keeps running on every 1.x version.
 | 0.2.0b4: Subflows, error handling, and run records | Failures handled in one place and recorded as facts the Hub can answer questions from | 2026-10-16 | Released |
 | 0.3.0b1: Expressions | Count, join, clean, and calculate values in `${...}`, safely | 2026-10-20 | Released |
 | 0.4.0b1: Web actions | Modern web pages without multi-step workarounds | 2026-10-23 | Released |
-| 0.5.0b1: Proven on business flows | A tutorial and a business example, run by CI with a real browser, and testing flows against saved pages | 2026-10-28 | Next |
+| 0.5.0b1: Proven on business flows | A tutorial and a business example, run by CI with a real browser, and testing flows against saved pages | 2026-10-28 | Released |
 | 1.0.0: Stable core | A core that can be trusted, with a written stability promise | 2026-11-03 | Planned |
 | 1.1.0: Agent interface | AI agents, small local ones first, can use Kinenix: ask about runs, start runs, and read the results | After 1.0.0 | Planned |
 | 1.2.0: Developer tools | See and check flows in the editor | After 1.1.0 | Planned |
@@ -105,7 +105,7 @@ Docs and release:
 **Exit criteria**
 
 Examples:
-- [ ] `docs/tutorial.md` and the `first_flow` example: a reader with an AI assistant gets from `kinenix init --example first_flow` to a passing run and a failure read on purpose; tried with two different assistants
+- [x] `docs/tutorial.md` and the `first_flow` example: a reader with an AI assistant gets from `kinenix init --example first_flow` to a passing run and a failure read on purpose; tried with two different assistants (Claude Code and Google Antigravity; details in #88)
 - [x] `quote_requests` has the `requirements.md` it was built from (a test checks every example has one), a README (the business story, input, output, how to run, how long it takes), fake sample data only, `> Requires:`, `redact` for personal fields, `## On Error` and `## Finally`, and passes `kinenix validate`
 - [x] Both ship with the package (`kinenix init --example`) and appear in a new `docs/examples.md` that says which patterns each shows
 
@@ -113,7 +113,7 @@ Automated:
 - [x] CI runs every offline example end to end in Chromium, headless, and checks its outputs (rows written, items failed); the tutorial's solution included (in the kinenix-core test suite: `test_tutorial.py`, `test_quote_requests_example.py`, and `hello` in `test_scaffold.py`)
 
 Release:
-- [ ] CHANGELOG entry; TestPyPI checked; tag `v0.5.0b1`; PyPI checked; then the kinenix-web branch that links `llms.txt` is merged
+- [x] CHANGELOG entry; TestPyPI checked; tag `v0.5.0b1`; PyPI checked; then the kinenix-web branch that links `llms.txt` is merged (released 2026-10-28)
 
 **Compatibility:** nothing changes for existing flows; this milestone adds examples and tests. Bugs found by the examples are fixed here.
 
@@ -123,7 +123,7 @@ Release:
 
 **Goal:** a core that can be trusted: what 1.0 keeps stable is written down, old names that will go are announced, and the release candidate has run on real machines before the final release.
 
-**Scope:** the release checklist issue, and issues found while testing the release candidate.
+**Scope:** the release checklist issue, and issues found while testing the release candidate. The date is kept (decided 2026-10-28): code by 2026-10-30, the release candidate on 2026-10-31, the 48-hour soak until 2026-11-02, only bug fixes after the candidate. Moved to 1.1.0: the `invoice_check` and `daily_sales_report` examples, #118 (docs structure), and #125 (AI assistant benchmark).
 
 **Exit criteria**
 
@@ -134,17 +134,13 @@ Before the release candidate:
 - [ ] Deprecations announced for 2.0, with a warning when used: the `orchestrator` names and `ORCHESTRATOR_*` variables, `on_error: retry`, `fallback_step_id`, `kinenix export-md`
 - [ ] Threat model of kinenix-core, kinenix-worker, and kinenix-hub (flows from others running code, secrets in logs and on the Hub, access to the Hub on the LAN without HTTPS, `hub query` changing data, file paths leaving their folder, dashboard XSS), and a code and security review against it, with every finding fixed or moved to a milestone
 - [ ] Security checks in CI on every pull request: `pip-audit` (no dependency with a known vulnerability) and `bandit` (every finding fixed or explained in the code)
-- [ ] `docs/releasing.md` installs from TestPyPI without its broken copies of other packages
-- [ ] Release `1.0.0rc1`
-
-Examples and reliability (moved from 0.5.0b1):
-- [ ] `invoice_check`: a folder of supplier invoices (Excel) is checked for totals, duplicates, and missing PO numbers; good ones go to a summary workbook, bad ones to an exceptions list, files are moved, and the output is zipped and e-mailed (`file.list` with `item_label`, `on_error: next_item`, On Error and Finally, `file.zip`, `email.send`)
-- [ ] `daily_sales_report`: a sales table read from a portal (local pages) is compared with targets from Excel and the differences reported, on a worker schedule that reports to the Hub (`web.get_table`, expressions, `kinenix-worker schedule`, `kinenix hub report`)
 - [ ] Failure-injection tests: the Hub is down or slow during a run (the run completes, the log is kept, one warning); an input file is missing; the browser closes in the middle of a loop (Finally still runs, no browser process is left)
-- [ ] Soak: the Raspberry Pi worker runs the offline examples every 30 minutes for 48 hours and reports to the Ubuntu Hub: no failure caused by Kinenix, memory does not grow, no browser process is left behind, and `report`, `logs`, and `query` answer correctly; a baseline (time and memory of a 100-item loop on the Raspberry Pi) is written in `docs/examples.md`
+- [x] `docs/releasing.md` installs from TestPyPI without its broken copies of other packages
+- [ ] Release `1.0.0rc1` (2026-10-31)
 
-Check of 1.0.0rc1, one day:
-- [ ] The examples pass in CI and on the Raspberry Pi worker with the release candidate, and `bot_fx_rate` runs on its cron schedule
+Check of 1.0.0rc1 (2026-10-31 to 2026-11-02):
+- [ ] Soak: the Raspberry Pi worker runs the offline examples (`hello`, `quote_requests`, the tutorial solution) every 30 minutes for 48 hours and reports to the Ubuntu Hub: no failure caused by Kinenix, memory does not grow, no browser process is left behind; a baseline (time and memory of a 100-item loop on the Raspberry Pi) is written in `docs/examples.md`
+- [ ] `bot_fx_rate` runs on its cron schedule on the worker
 - [ ] Ubuntu Hub: every run and failure is recorded, and `report`, `logs`, and `query` answer correctly
 - [ ] Windows: a Hub database from 0.2.0b3 upgrades with no data lost
 - [ ] Only bug fixes after the release candidate
@@ -183,6 +179,9 @@ Automated:
 - [ ] MCP server with a short list of tools (read-only ones free, runs only after confirmation), using the same functions as the CLI
 - [ ] `kinenix ask` answers questions about runs and workers in Thai and English with a local model, every number from the Hub database
 - [ ] An evaluation set of agent tasks (ask, run, explain a failure) with a success rate measured for at least one small local model and one cloud model
+- [ ] A benchmark of how well popular AI assistants build flows from `requirements.md`, with a fixed method and a hidden task, published as `docs/benchmarks/assistants.md` (#125)
+- [ ] Two more business examples, each with its `requirements.md`: `invoice_check` (supplier invoices in Excel checked for totals, duplicates, and missing PO numbers; `file.list` with `item_label`, `on_error: next_item`, `file.zip`, `email.send`) and `daily_sales_report` (a sales table from a portal compared with targets; `web.get_table`, a worker schedule, `kinenix hub report`)
+- [ ] The website organized as tutorial, how-to, reference, and explanation (#118)
 
 Field test:
 - [ ] On the Ubuntu machine, a local model answers "did this flow fail last night, and where?" correctly from the Hub, and starts a flow on the Raspberry Pi worker after confirmation
