@@ -95,7 +95,9 @@ Then:
    kinenix run get_stock_data
    ```
 
-The `bot_fx_rate` example below was built this way: its README contains the original requirements.
+The `bot_fx_rate` example below was built this way, from its `requirements.md`. Every example has one, as a model for writing yours.
+
+**To learn this way of working step by step, follow the [tutorial](tutorial.md)** (about 20 minutes, no internet): `kinenix init my-first-flow --example first_flow` gives you finished requirements and an empty `flow.md`, and you let your assistant build, validate, run, and break it.
 
 ## 6. Automate a website (2 minutes)
 
@@ -152,6 +154,8 @@ A run that does not show up: [Hub guide, How Machines Connect, and Troubleshooti
 
 | Goal | Read |
 | :--- | :--- |
+| Build a first flow with an AI assistant, step by step | [Tutorial](tutorial.md) |
+| Complete projects to copy and adapt | [Examples](examples.md) |
 | Write your own flows | [Flow Markdown specification](flow_markdown_spec.md), [actions reference](actions_reference.md) |
 | Bundles, config, secrets in `.env`, subflows | [Project bundles](project_bundles.md) |
 | All `kinenix` commands | [CLI guide](cli_guide.md) |

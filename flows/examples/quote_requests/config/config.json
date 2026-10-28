@@ -1,0 +1,11 @@
+{
+  "website_url": "tests/pages/quote.html",
+  "input_csv": "input/requests.csv",
+  "headless": false,
+  "redact": ["customer_name"],
+  "email": {
+    "to": ["sales-team@example.com"],
+    "subject": "[Kinenix] Motor insurance quotes",
+    "dry_run": true
+  }
+}

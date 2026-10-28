@@ -10,6 +10,10 @@ kinenix run .
 
 A browser window opens (set `headless` in `flow.md` step 1 to `true` to hide it, for example on a server). When it finishes, the challenge's result message is saved as a screenshot in `output/screenshots/`.
 
+## Requirements
+
+[`requirements.md`](requirements.md) says what this flow must do, in the sections you fill in for your own task after `kinenix init "Task name"`.
+
 ## How it works
 
 | Step | What it does |

@@ -63,7 +63,7 @@ A flow is one `flow.md` file; there is no `flow.json` (the runner and the worker
 
 Users keep their own flows in a flows folder outside this repository (`workspace.py`, default `~/kinenix-flows`). `flows/` here holds only the examples shipped with Kinenix and shared subflows; do not add user or business flows to it.
 
-After editing `flows/examples/hello`, `bot_fx_rate`, or `rpachallenge`, run `python .github/scripts/sync_examples.py`: the package ships copies of them for `kinenix init --example`, and a test fails when the copies differ. The new-project template (`requirements.md`, an `AGENTS.md` for the user's AI assistant, and the rest) lives in `kinenix-core/kinenix/templates/new_project/`.
+After editing `flows/examples/hello`, `bot_fx_rate`, `rpachallenge`, `first_flow` (the tutorial, `docs/tutorial.md`), or `quote_requests`, run `python .github/scripts/sync_examples.py`: the package ships copies of them for `kinenix init --example`, and a test fails when the copies differ. The new-project template (`requirements.md`, an `AGENTS.md` for the user's AI assistant, and the rest) lives in `kinenix-core/kinenix/templates/new_project/`.
 
 `kinenix`, `kinenix-hub`, and `kinenix-worker` are published to PyPI together with one version (`pip install "kinenix[hub]"`, `"kinenix[worker]"`); the version lives in each package's `__version__`. Releases are tag-driven through `.github/workflows/release.yml`; follow [docs/releasing.md](docs/releasing.md) and never reuse a released version number. `kinenix-studio` is not published.
 

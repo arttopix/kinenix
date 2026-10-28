@@ -87,7 +87,10 @@ def _repo_flows():
 
 
 @pytest.mark.parametrize("path", _repo_flows(), ids=lambda p: str(p.relative_to(REPO_ROOT)))
-def test_repository_flows_are_valid(path):
+def test_repository_flows_are_valid(path, monkeypatch):
+    # Like the docs, the examples describe the version being developed, which their `> Requires:` may name
+    from kinenix.engine import requires
+    monkeypatch.setattr(requires, "__version__", "999.0")
     if path.suffix == ".json":
         data = json.loads(path.read_text(encoding="utf-8-sig"))
         if "steps" not in data:

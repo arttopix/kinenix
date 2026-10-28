@@ -19,12 +19,15 @@ Each topic has one owning document. Other files link here instead of repeating t
 | :--- | :--- |
 | [flow_markdown_spec.md](flow_markdown_spec.md) | `flow.md` syntax, validation, and the compiled form (`kinenix compile`) |
 | [actions_reference.md](actions_reference.md) | Every built-in action with parameters and examples |
-| [project_bundles.md](project_bundles.md) | Bundle layout, `config.json`, `.env`, subflows (`flow.call`), deployment lifecycle |
+| [project_bundles.md](project_bundles.md) | Bundle layout, `config.json`, `.env`, subflows (`flow.call`), deployment lifecycle, testing against saved pages |
+| [llms.txt](llms.txt) | For AI assistants: how a flow is built and which pages to read, served as https://www.kinenix.com/llms.txt |
 
 ## Run and Operate
 
 | Document | Covers |
 | :--- | :--- |
+| [examples.md](examples.md) | The examples that ship with Kinenix, what each does, and which patterns it shows |
+| [tutorial.md](tutorial.md) | Tutorial: build a first flow from `requirements.md` with an AI assistant, validate, run, and break it on purpose (the `first_flow` example) |
 | [quickstart.md](quickstart.md) | Install, create a project with `kinenix init`, run it, and connect a worker to the Hub in about ten minutes |
 | [cli_guide.md](cli_guide.md) | `kinenix` commands and options |
 | [hub.md](hub.md) | Running the Hub, environment variables, worker authentication, querying runs (`kinenix hub query`), user views |

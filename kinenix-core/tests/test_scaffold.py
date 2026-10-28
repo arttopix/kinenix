@@ -30,7 +30,7 @@ def test_examples_are_listed_with_the_default_first():
 def test_hello_project_is_created_and_runs(tmp_path):
     project = scaffold.create_project(tmp_path / "my-bot")
     assert sorted(p.relative_to(project).as_posix() for p in project.rglob("*") if p.is_file()) == [
-        "README.md", "config/config.json", "flow.md", "subflows/make_greeting.md",
+        "README.md", "config/config.json", "flow.md", "requirements.md", "subflows/make_greeting.md",
     ]
 
     flow = load_flow(project / "flow.md")
@@ -73,7 +73,10 @@ def test_existing_folder_rules(tmp_path):
         scaffold.create_project(tmp_path / "x", "nope")
 
 
-def test_every_example_creates_a_valid_project(tmp_path):
+def test_every_example_creates_a_valid_project(tmp_path, monkeypatch):
+    # Examples describe the version being developed, which their `> Requires:` may name
+    from kinenix.engine import requires
+    monkeypatch.setattr(requires, "__version__", "999.0")
     for name, _, _ in scaffold.available_examples():
         project = scaffold.create_project(tmp_path / name, name)
         assert validate_flow(load_flow(project / "flow.md")) == [], name
@@ -220,3 +223,18 @@ def test_list_names_a_flow_by_its_folder_also_from_inside_it(tmp_path, monkeypat
     flows = discover_flows()
     assert "." not in flows and "old" not in flows
     assert flows["tiph_test"][0] == bundle / "flow.md"
+
+
+def test_every_example_has_requirements_with_the_template_sections():
+    # Each example shows the requirements it does, in the sections a new project's requirements.md has
+    import re
+    template = (scaffold.NEW_PROJECT_TEMPLATE / "requirements.md").read_text(encoding="utf-8")
+    sections = re.findall(r"^## (.+)$", template, re.M)
+    examples = Path(__file__).resolve().parents[2] / "flows" / "examples"
+    bundles = sorted(p for p in examples.iterdir() if (p / "flow.md").is_file())
+    assert bundles
+    for bundle in bundles:
+        text = (bundle / "requirements.md").read_text(encoding="utf-8")
+        assert re.findall(r"^## (.+)$", text, re.M) == sections, bundle.name
+        assert "<" not in re.sub(r"`[^`]*`", "", text), f"{bundle.name}: a template hint was left in"
+        assert "requirements.md" in (bundle / "README.md").read_text(encoding="utf-8"), bundle.name

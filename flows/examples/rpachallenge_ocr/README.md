@@ -2,6 +2,8 @@
 
 This is a self-contained Project Bundle flow for the **Automation Challenge - OCR** benchmark.
 
+Requirements: [`requirements.md`](requirements.md), in the sections you fill in for your own task after `kinenix init "Task name"`.
+
 ---
 
 ## 1. Overview

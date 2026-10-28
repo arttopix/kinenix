@@ -2,6 +2,31 @@
 
 `kinenix`, `kinenix-hub`, and `kinenix-worker` are released together with one version. How to release: [docs/releasing.md](docs/releasing.md).
 
+## 0.5.0b1 (2026-10-28)
+
+Learn and test: a tutorial from requirements to a running flow, a business example, testing a flow against saved pages, and documentation for AI assistants.
+
+Nothing changes for existing flows. A flow that uses `match: loose` on `web.choose`, or a page saved in its folder as the `url` of `web.open` or `web.goto`, should say `> Requires: kinenix>=0.5.0b1`: older versions do not know them.
+
+### Learn
+
+- A tutorial, `docs/tutorial.md` (https://www.kinenix.com/tutorial/): `kinenix init my-first-flow --example first_flow` gives a finished `requirements.md`, an empty `flow.md` for your AI assistant to build, a made-up shop's catalog saved in the project, and a solution; it goes through validate, run, and breaking the flow on purpose (#117).
+- `quote_requests`, a business example: quote requests from a CSV entered into a made-up insurer's form, the packages collected, and the failed requests listed with their reasons, offline.
+- `docs/examples.md`: every example and the patterns it shows. Every example has the `requirements.md` it implements.
+- `llms.txt` for AI assistants, served as https://www.kinenix.com/llms.txt (#119).
+
+### Flows
+
+- Test a flow against saved pages: `kinenix run FLOW --config config/test.json` replaces settings for one run, and `web.open` and `web.goto` open a page saved in the flow's folder, such as `tests/pages/form.html` (#106).
+- `web.choose` with `match: loose` ignores spaces, hyphens, and case (`HRV` picks `HR-V`); several loose matches fail instead of guessing. `match: contains` replaces `exact: false`, which still works. `search_text` sets what is typed into the search box (#107).
+- `kinenix validate` reports a `flow.json` or a subflow `.json` next to its `.md`; `kinenix init --update-agents` refreshes `AGENTS.md` and `CLAUDE.md` of an older project from the current template (#105).
+- The `AGENTS.md` given to new projects teaches `on_error: next_item` in loops, the web actions of 0.4.0b1, cookie banners and menus, resetting a subflow's result before each call, and testing against saved pages.
+
+### Also
+
+- `kinenix init --example` also copies `.env.example`, input files, saved test pages, and a tutorial's solution; `kinenix list` no longer lists a `solution` folder as a flow.
+- CI runs the offline examples end to end in Chromium, with their outputs checked.
+
 ## 0.4.0b1 (2026-10-23)
 
 Web actions: modern pages (cards instead of tables, custom dropdowns, paged tables, single-page apps) in one step each.
