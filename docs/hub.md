@@ -226,7 +226,7 @@ curl.exe -u admin:<strong-password> http://<hub-ip>:8080/api/v1/executions
 
 ## 5. Renamed from Orchestrator
 
-The Hub was called the Orchestrator. Old names keep working for now, with a warning asking you to switch:
+The Hub was called the Orchestrator. Old names keep working in 1.x, with a warning asking you to switch; Kinenix 2.0 removes them:
 
 | Before | Now |
 | :--- | :--- |

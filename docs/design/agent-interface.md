@@ -91,11 +91,11 @@ The same objects appear in every command and in the MCP server; their fields fol
 | `kinenix capabilities` | | version, actions and their parameters, expression functions, features | read-only | `kinenix actions` (text) |
 | `kinenix list` | | Flow list | read-only | text |
 | `kinenix describe FLOW` | flow | Flow, with inputs and side effects | read-only | none |
-| `kinenix validate FLOW` | flow | Issue list | read-only | text, exit 1 |
-| `kinenix run FLOW` | flow, `--var NAME=VALUE`, `--dry-run`, `--detach`, `--yes` | Run (with `--detach`: `run_id` at once) | **side effect** | runs; `run_id` only in the log |
+| `kinenix validate FLOW` | flow | Issue list | read-only | text, exit 4 on problems |
+| `kinenix run FLOW` | flow, `--var NAME=VALUE`, `--dry-run`, `--detach`, `--yes` | Run (with `--detach`: `run_id` at once) | **side effect** | runs; prints `Run <run_id>` first; exit codes of section 4 |
 | `kinenix runs status RUN_ID` | run id | Run so far (from the live log) | read-only | none |
 | `kinenix hub report` | flow or run id, limit | Run list | read-only | text |
-| `kinenix hub logs` | flow or run id | Run with Step list | read-only | text |
+| `kinenix hub logs` | flow or run id | Run with Step list | read-only | text; accepts the run id |
 | `kinenix hub query` | view, filters, or SQL | rows | read-only | `--format json` |
 | `kinenix hub status` | | workers, recent runs | read-only | text |
 | `kinenix connect` | | Hub in use and whether it answers | read-only (without a URL) | text |

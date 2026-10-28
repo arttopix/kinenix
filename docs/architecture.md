@@ -77,7 +77,7 @@ sequenceDiagram
         alt Success
             Engine->>Context: Store result in output_var
         else Failure
-            Engine->>Engine: Apply on_error (retry / continue / fallback_step_id)
+            Engine->>Engine: Apply on_error (fail / continue / next_item)
             Engine->>Target: Capture failure screenshot if a browser page is open
         end
     end

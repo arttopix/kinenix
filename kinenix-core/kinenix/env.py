@@ -30,7 +30,7 @@ def get_env(name: str, default: str = "") -> str:
     if old and os.environ.get(old):
         if old not in _warned:
             _warned.add(old)
-            logger.warning(f"{old} is deprecated; rename it to {name}.")
+            logger.warning(f"{old} is deprecated and will be removed in Kinenix 2.0; rename it to {name}.")
         return os.environ[old]
     from .workspace import saved_settings  # imported here, so importing this module never reads the file
     return saved_settings().get(name) or default

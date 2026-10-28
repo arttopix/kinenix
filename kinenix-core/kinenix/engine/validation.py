@@ -83,6 +83,26 @@ NEWER_FEATURES = {
 }
 
 
+REMOVED_IN = "Kinenix 2.0"
+
+
+def deprecated_uses(flow: FlowDefinition) -> List[str]:
+    """Parts of a flow that still work in 1.x but will be removed in 2.0. They are warnings, not problems:
+    kinenix validate prints them without failing, and every run logs them."""
+    found = []
+    for step in _walk(_all_steps(flow)):
+        where = f"Step '{step.id}' ({step.name})"
+        if _on_error(step) == "retry":
+            found.append(f"{where}: on_error retry is deprecated and will be removed in {REMOVED_IN}. "
+                         f"It already works like fail: delete the line, or write on_error: fail. "
+                         f"max_retries does the retrying.")
+        if step.error_handler and step.error_handler.fallback_step_id:
+            found.append(f"{where}: fallback_step_id is deprecated and will be removed in {REMOVED_IN}. "
+                         f"Use on_error: continue and a next step with a condition on ${{error}}, "
+                         f"or recover in ## On Error.")
+    return found
+
+
 def _uses_expressions(steps: List[Step]) -> bool:
     for step in steps:
         for text in _placeholders([step.parameters, step.condition]):

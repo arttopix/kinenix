@@ -102,7 +102,7 @@ All parameters passed to the action must be written as Markdown bullet items dir
 - **List or object (JSON):** `- **columns:** ["Date", "Rate"]` or `- **item:** {"net": "${number(inv.amount)}"}`. Put quotes around `${...}` inside JSON; a value written as `{...}` or `[...]` that is not valid JSON is read as text, and `kinenix validate` reports it
 - **Dynamic Variable Expression:** `- **url:** ${config.website}`
 - **Output Variable:** `- **output_var:** my_result` (stores action result in context)
-- **Error Handling:** `- **on_error:** retry`, `- **max_retries:** 2`, `- **retry_interval:** 3.0`, `- **fallback_step_id:** step_9`. These four keys are compiled into the step's `error_handler`, not into the action parameters (see [Step Resilience & Error Handling](actions_reference.md#step-resilience--error-handling-error_handler)).
+- **Error Handling:** `- **on_error:** continue`, `- **max_retries:** 2`, `- **retry_interval:** 3.0`, `- **fallback_step_id:** step_9` (deprecated). These four keys are compiled into the step's `error_handler`, not into the action parameters (see [Step Resilience & Error Handling](actions_reference.md#step-resilience--error-handling-error_handler)).
 
 #### Example
 ```markdown
@@ -285,7 +285,7 @@ Any step can retry and then decide what happens:
 | `on_error` | After the last attempt |
 | :--- | :--- |
 | not set, `fail`, or `stop` | The flow fails: the remaining steps are skipped and `## On Error` runs |
-| `retry` | Same as `fail` (kept for flows written before 0.2.0b4) |
+| `retry` | Same as `fail`. Deprecated: removed in Kinenix 2.0; `kinenix validate` and every run warn. Delete the line, `max_retries` does the retrying |
 | `continue` | The failure is recorded and the flow goes on with the next step |
 | `next_item` | For a step inside a `logic.loop` (Kinenix 0.4.0b1): the failure is recorded, the rest of this item's sub-steps are skipped, and the loop goes on with its next item. The item counts as failed. Outside a loop it stops the flow like `fail`, and `kinenix validate` reports it |
 
@@ -310,7 +310,7 @@ Any step can retry and then decide what happens:
 
 With nested loops, `next_item` ends the item of the innermost loop. In a subflow called for each item, set `next_item` on the `flow.call` step in the loop; the subflow's own steps are not inside that loop.
 
-`fallback_step_id` still runs a recovery step instead. `max_retries` and `retry_interval` accept `${...}`, for example `${config.retries}`. Business errors (`flow.fail`) are not retried.
+`fallback_step_id` still runs a recovery step instead, but it is deprecated and removed in Kinenix 2.0: use `on_error: continue` and a next step with a `condition`, or `## On Error`. `max_retries` and `retry_interval` accept `${...}`, for example `${config.retries}`. Business errors (`flow.fail`) are not retried.
 
 ### 3.2 `## On Error` and `## Finally`
 

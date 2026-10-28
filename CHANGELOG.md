@@ -2,6 +2,19 @@
 
 `kinenix`, `kinenix-hub`, and `kinenix-worker` are released together with one version. How to release: [docs/releasing.md](docs/releasing.md).
 
+## Unreleased
+
+### Deprecated
+
+These still work in 1.x and warn when used; Kinenix 2.0 removes them.
+
+- `on_error: retry`: it already works like `fail`. Delete the line; `max_retries` does the retrying.
+- `fallback_step_id`: use `on_error: continue` and a next step with a `condition`, or `## On Error`.
+- `kinenix export-md`: convert any `flow.json` from 0.2.0b3 or older with Kinenix 1.x.
+- The Orchestrator names: `kinenix orchestrator`, `kinenix run --orchestrator`, the `ORCHESTRATOR_*` and `KINENIX_ORCHESTRATOR_*` variables, and `~/.kinenix/orchestrator.env` ([docs/hub.md](docs/hub.md), section 5).
+
+`kinenix validate` prints the deprecated parts of a flow without failing, and every run logs them.
+
 ## 0.5.0b1 (2026-10-28)
 
 Learn and test: a tutorial from requirements to a running flow, a business example, testing a flow against saved pages, and documentation for AI assistants.

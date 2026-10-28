@@ -51,3 +51,16 @@ def test_default_hub_env_falls_back_to_legacy_file_only_by_default(monkeypatch, 
 
     write_settings(default, {"KINENIX_HUB_API_KEY": "from-hub"})
     assert read_saved_settings(default) == {"KINENIX_HUB_API_KEY": "from-hub"}
+
+
+def test_reading_the_legacy_settings_file_is_reported(monkeypatch, tmp_path, caplog):
+    default = tmp_path / "hub.env"
+    legacy = tmp_path / "orchestrator.env"
+    write_settings(legacy, {"ORCHESTRATOR_API_KEY": "from-legacy"})
+    monkeypatch.setattr(settings_file, "DEFAULT_SETTINGS_FILE", default)
+    monkeypatch.setattr(settings_file, "LEGACY_SETTINGS_FILE", legacy)
+    monkeypatch.setattr(settings_file, "LEGACY_USED", {})
+    read_saved_settings(default)
+    with caplog.at_level("WARNING"):
+        hub_config.log_legacy_names()
+    assert "orchestrator.env is read in place of" in caplog.text and "Kinenix 2.0" in caplog.text
