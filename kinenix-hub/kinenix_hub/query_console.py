@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 import requests
+from kinenix import exit_codes
 from rich.console import Console
 from rich.markup import escape
 from rich.table import Table
@@ -256,7 +257,7 @@ def main(console: Console, error_console: Console, args: Any, hub_config: Any, i
             return 0
         except hub_query.QueryError as e:
             error_console.print(f"[bold red]Error:[/] {escape(str(e))}")
-            return 1
+            return e.exit_code
         except requests.HTTPError as e:
             code = e.response.status_code
             if code == 401 and auth is None and interactive:
@@ -266,7 +267,8 @@ def main(console: Console, error_console: Console, args: Any, hub_config: Any, i
                     continue
             hint = " Check KINENIX_HUB_DASHBOARD_USER and KINENIX_HUB_DASHBOARD_PASSWORD against the server's values." if code in (401, 403) else ""
             error_console.print(f"[bold red]Error:[/] {args.url} returned HTTP {code}.{hint}")
-            return 1
+            return exit_codes.UNREACHABLE if code in (401, 403) else exit_codes.NOT_FOUND if code == 404 \
+                else exit_codes.TECHNICAL
         except requests.RequestException as e:
             error_console.print(f"[bold red]Error:[/] cannot reach {args.url}. Is the Hub running? ({e.__class__.__name__})")
-            return 1
+            return exit_codes.UNREACHABLE

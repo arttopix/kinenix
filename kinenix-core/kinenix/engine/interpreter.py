@@ -353,7 +353,9 @@ class FlowInterpreter:
         run_info = context.get_variable("run") if self.call_stack else None
         if not isinstance(run_info, dict) or not run_info.get("id"):
             started = local_now()
-            run_info = {"id": new_run_id(started), "flow": flow_def.name,
+            # The CLI makes the id before the run, so `Run <id>` is the first line it prints
+            run_id = (initial_vars or {}).get("__run_id__") if not self.call_stack else None
+            run_info = {"id": run_id or new_run_id(started), "flow": flow_def.name,
                         "started": started.isoformat(timespec="seconds")}
         run_info = {**run_info, "status": "running"}
         if not self.call_stack:

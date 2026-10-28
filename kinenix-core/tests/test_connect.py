@@ -112,7 +112,7 @@ def test_saving_without_a_key_that_was_not_checked_warns(capsys):
 
 def test_connect_saves_only_after_a_good_check(capsys):
     with patch("kinenix.connect.check", return_value=connect.CheckResult(False, "The Hub rejected the key.")):
-        assert connect.connect("hub", "bad") == 1
+        assert connect.connect("hub", "bad") == 6  # the Hub refused the key
     assert workspace.saved_settings() == {}
     assert "Nothing was saved" in capsys.readouterr().out
 

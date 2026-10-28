@@ -461,7 +461,7 @@ Below is the complete `flow.md` specification for the **RPA Challenge Solver** b
 
 1. **Validation of actions and parameters:**
    ```bash
-   kinenix validate flows/examples/rpachallenge          # exit code 1 when problems are found
+   kinenix validate flows/examples/rpachallenge          # exit code 4 when problems are found
    ```
    Each action declares the parameters it reads. `kinenix validate`, `kinenix run`, and `kinenix-worker run` report unknown actions, parameters that no action reads (which would otherwise be ignored silently), lines the parser ignores, step headings without an action, and a flow without steps, and suggest the closest name (for example `timout` -> `timeout`). They also follow `flow.call` targets into subflows. `run` only warns, except that a flow without steps does not run. The `kinenix-core` test suite validates every flow under `flows/` and every example in `docs/`.
 2. **Compiled form (for inspection):**

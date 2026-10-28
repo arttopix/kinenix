@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any, Dict, Optional
 
 import psutil
+from kinenix import exit_codes
 from kinenix.engine.interpreter import FlowInterpreter
 from kinenix.engine.logger import ExecutionLogger
 from kinenix.engine.markdown import load_flow, markdown_issues
@@ -129,6 +130,8 @@ class WorkerRunner:
             # Top-level steps only, to match steps_total; loop iterations would otherwise give e.g. "40/20"
             "steps_executed": len({r.step_id for r in ctx.step_results} & {s.id for s in flow_def.steps}),
             "has_error": ctx.has_error,
+            "exit_code": exit_codes.for_run(ctx),
+            "run_id": (ctx.get_variable("run") or {}).get("id"),
             "error": self._error_summary(ctx),
             "worker_system": system_info
         }

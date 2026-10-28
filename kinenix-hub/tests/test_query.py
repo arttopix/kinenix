@@ -242,11 +242,11 @@ def test_command_on_this_machine(conn, tmp_path):
 
 def test_command_errors():
     code, _, err = _run_cli(_args(target="DELETE FROM executions"))
-    assert code == 1 and "can only read" in err
+    assert code == 2 and "can only read" in err
     code, _, err = _run_cli(_args(target="v_runs", filter=["no-equals-sign"]))
-    assert code == 1 and "column=value" in err
+    assert code == 2 and "column=value" in err
     code, _, err = _run_cli(_args())
-    assert code == 1 and "--list" in err
+    assert code == 2 and "--list" in err
 
 
 def test_package_copy_of_the_data_dictionary_is_current():
@@ -262,7 +262,7 @@ def test_the_target_may_follow_options(tmp_path):
     env = {**os.environ, "DATABASE_URL": f"sqlite:///{(tmp_path / 'none.db').as_posix()}"}
     res = subprocess.run([sys.executable, "-m", "kinenix.cli", "hub", "query", "--limit", "5", "SELECT 1"],
                          capture_output=True, text=True, timeout=60, env=env)
-    assert res.returncode == 1
+    assert res.returncode == 7  # not found
     assert "No Hub database" in res.stdout + res.stderr and "unrecognized" not in res.stderr
     res = subprocess.run([sys.executable, "-m", "kinenix.cli", "hub", "query", "a", "b"],
                          capture_output=True, text=True, timeout=60, env=env)
@@ -324,7 +324,7 @@ def test_report_command(report_runs):
     assert f"Steps: kinenix hub logs {report_runs['new'][:8]}" in out
     # A long line is not broken into two, so it copies whole
     assert any(len(line) > 60 and line.startswith("- Failed: R007") for line in out.splitlines())
-    assert query_console.main(console, errors, _args(flow="monthly"), hub_config, False, query_console.report_command) == 1
+    assert query_console.main(console, errors, _args(flow="monthly"), hub_config, False, query_console.report_command) == 2
     assert "Type more of the name" in errors.export_text()
 
 

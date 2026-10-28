@@ -46,7 +46,7 @@ Layer 1 comes first; layers 2 to 4 only call it.
 | 7 | Not found: no such flow, run id, or view | No |
 | 130 | Interrupted (Ctrl+C) | |
 
-A run that stops in `## Steps` takes the code of that failure; a failure in `## Finally` after successful steps is 1. Today every failure is 1.
+A run that stops in `## Steps` takes the code of that failure; a failure in `## Finally` after successful steps is 1. Built in 1.0.0 (`kinenix/exit_codes.py`); the user reference is [cli_guide.md, Exit Codes](../cli_guide.md#28-exit-codes).
 
 ## 5. The envelope
 

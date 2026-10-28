@@ -97,7 +97,7 @@ Real pages change. The project has a second settings file that points the flow a
 kinenix run my-first-flow --config config/empty.json
 ```
 
-`--config` replaces the settings of `config/config.json` that the file names, for this run only ([cli_guide.md](cli_guide.md)). If your flow follows the requirements, it stops with a message that says what is wrong and what to check, and `kinenix run` exits with code 1, so a scheduler or a CI job knows the run failed. Kinenix also saved a screenshot of the page in `output/errors/`.
+`--config` replaces the settings of `config/config.json` that the file names, for this run only ([cli_guide.md](cli_guide.md)). If your flow follows the requirements, it stops with a message that says what is wrong and what to check, and `kinenix run` exits with code 3, so a scheduler or a CI job knows the run stopped on a problem with the data (a technical failure, such as a page that cannot be opened, is 1; all codes: [cli_guide.md, Exit Codes](cli_guide.md#28-exit-codes)). Kinenix also saved a screenshot of the page in `output/errors/`.
 
 Try two more changes and read what Kinenix reports:
 
