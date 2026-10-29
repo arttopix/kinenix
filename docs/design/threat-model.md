@@ -1,6 +1,6 @@
 # Design: Threat Model
 
-Status: **draft for review** (2026-10-29). It covers kinenix-core, kinenix-worker, and kinenix-hub as of 1.0.0rc1. Studio (paused, not published) is out of scope. The code and security review for 1.0.0 (`docs/roadmap.md`) checks the code against this document. Every finding is fixed or moved to a milestone (section 6).
+Status: **reviewed** (2026-10-29). It covers kinenix-core, kinenix-worker, and kinenix-hub as of 1.0.0rc1. Studio (paused, not published) is out of scope. The code and security review for 1.0.0 (`docs/roadmap.md`) checks the code against this document. Every finding is fixed or moved to a milestone (section 6).
 
 ## 1. What Kinenix protects
 
@@ -84,3 +84,15 @@ Filled in during the review: each finding with its threat, what was done, and th
 | A localhost-only Hub answered requests for any `Host`, so a web page could read runs through DNS rebinding | T4 | Fixed: `kinenix_hub/security.py` checks `Host` on that path |
 | `PIN`, `OTP`, and `PASSCODE` values were not redacted | T2 | Fixed: `engine/redaction.py` |
 | `--sandbox` copies kept the bundle's `.env` forever, and the help called them isolated | T12 | Fixed: `.env` deleted after the run; wording in README and help |
+| A missing `./subflows/x.md` fell back to the current folder and to flows found by name, so another flow with that path or name could run | T1, T6 | Fixed: a target that starts with `./` or `../` is looked up only in the bundle; `kinenix validate` reports it as not found. `@shared/` targets still search the `@shared` folders of the known flow locations, which is intended |
+| The Hub's built-in failure hint recommended `on_error: retry`, now deprecated | T9 | Fixed: it recommends `max_retries` |
+| No limit on dashboard password attempts (each costs one PBKDF2 hash) | T3 | Later, with per-user accounts; the password is hashed with 300,000 iterations, and the Hub is localhost-only unless the user opens it |
+
+Checked with no finding (2026-10-29):
+
+- **T2:** the JSON log, the live log, error lines on the console, and telemetry all go through the Redactor; actions print no parameter values; screenshots are referenced by path only.
+- **T3, T8:** every write endpoint needs the worker key, and every read endpoint needs the dashboard password (or localhost with a local `Host`); keys are compared in constant time; malformed telemetry is recorded as an "Unknown" run instead of failing the Hub.
+- **T5:** see #133.
+- **T7:** every value from a worker that reaches `innerHTML` in `app.js` passes `escapeHtml`, and the modal uses `innerText`.
+- **T9:** `CENTRAL_LLM_URL` and the SystemOne action default to `127.0.0.1`; nothing leaves the machine unless the user sets another address.
+- **T10:** see the CI security checks (#133); dependency upper bounds and an SBOM stay for later.
