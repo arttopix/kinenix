@@ -124,8 +124,18 @@ def objects(conn: _Connection) -> Dict[str, str]:
     return {name: kind for name, kind in rows}
 
 
+def known_name(conn: _Connection, name: str) -> str:
+    """The table or view called `name`, spelled as the database returns it, so SQL is built only from names
+    the database itself gave (CodeQL py/sql-injection); QueryError (not found) for any other text."""
+    for known in objects(conn):
+        if known == name:
+            return known
+    raise QueryError(f"'{name}' is not a table or view. Run kinenix hub query --list to see them.", exit_code=7)
+
+
 def columns_of(conn: _Connection, name: str) -> List[str]:
-    return [d[0] for d in conn.execute(f'SELECT * FROM "{name}" LIMIT 0').description]  # nosec B608: name is checked against objects()
+    """Columns of `name`, a name from objects() or known_name()."""
+    return [d[0] for d in conn.execute(f'SELECT * FROM "{name}" LIMIT 0').description]  # nosec B608: name comes from the database
 
 
 def parse_since(value: str, now: Optional[datetime.datetime] = None) -> str:
@@ -166,9 +176,7 @@ def build_select(conn: _Connection, name: str, since: Optional[str] = None, flow
                  worker: Optional[str] = None, status: Optional[str] = None,
                  filters: Optional[Dict[str, str]] = None, limit: int = DEFAULT_LIMIT) -> Tuple[str, List[Any]]:
     """SELECT for a table or view with the --since, --flow, --worker, --status, and --filter conditions."""
-    known = objects(conn)
-    if name not in known:
-        raise QueryError(f"'{name}' is not a table or view. Run kinenix hub query --list to see them.", exit_code=7)
+    name = known_name(conn, name)
     columns = columns_of(conn, name)
     conditions: List[str] = []
     params: List[Any] = []
@@ -258,9 +266,7 @@ def catalog(conn: _Connection, views_dir: Optional[Path] = None) -> List[Dict[st
 
 def describe(conn: _Connection, name: str, views_dir: Optional[Path] = None) -> Dict[str, Any]:
     """Columns of a table or view with their meaning and example, from the data dictionary (--describe)."""
-    known = objects(conn)
-    if name not in known:
-        raise QueryError(f"'{name}' is not a table or view. Run kinenix hub query --list to see them.", exit_code=7)
+    name = known_name(conn, name)
     entries = dictionary.load()
     entry = entries.get(name)
     columns = []
@@ -270,7 +276,7 @@ def describe(conn: _Connection, name: str, views_dir: Optional[Path] = None) -> 
     details = entries.get(f"{name}.details")
     return {
         "name": name,
-        "type": known[name],
+        "type": objects(conn)[name],
         "about": entry.description if entry else "",
         "doc": "" if entry else user_view_doc(views_dir, name),
         "columns": columns,
