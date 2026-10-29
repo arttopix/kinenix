@@ -34,7 +34,7 @@ def main():
     # Command: run
     run_parser = subparsers.add_parser("run", help="Execute a flow or project bundle on this worker")
     run_parser.add_argument("flow_path", help="Flow name, project bundle directory, or path to a flow.md")
-    run_parser.add_argument("--sandbox", action="store_true", help="Execute inside an isolated temporary sandbox workspace")
+    run_parser.add_argument("--sandbox", action="store_true", help="Run from a separate copy of the bundle in ~/.kinenix/workspaces (not isolation: the flow keeps your rights)")
     run_parser.add_argument("--vars", type=str, help="JSON string of variables to inject (e.g. '{\"env\":\"prod\"}')")
     run_parser.add_argument("--log-dir", type=str, help="Custom directory path to store execution logs")
 
@@ -44,7 +44,7 @@ def main():
     watch_parser.add_argument("--flow", required=True, help="Flow name, bundle directory, or flow.md to execute")
     watch_parser.add_argument("--pattern", default="*.*", help="File matching pattern (e.g. '*.xlsx', '*.csv')")
     watch_parser.add_argument("--interval", type=float, default=2.0, help="Polling interval in seconds")
-    watch_parser.add_argument("--sandbox", action="store_true", help="Execute in isolated sandbox workspace")
+    watch_parser.add_argument("--sandbox", action="store_true", help="Run each time from a separate copy of the bundle (not isolation)")
     watch_parser.add_argument("--vars", type=str, help="JSON string of variables to inject")
 
     # Command: schedule
@@ -53,7 +53,7 @@ def main():
     sched_parser.add_argument("--interval", type=float, default=60.0, help="Interval in seconds between runs")
     sched_parser.add_argument("--cron", type=str, default=None,
                               help="Five-field cron expression in local time, e.g. '0 8 1 * *' (overrides --interval)")
-    sched_parser.add_argument("--sandbox", action="store_true", help="Execute in isolated sandbox workspace")
+    sched_parser.add_argument("--sandbox", action="store_true", help="Run each time from a separate copy of the bundle (not isolation)")
     sched_parser.add_argument("--vars", type=str, help="JSON string of variables to inject")
 
     # Command: daemon

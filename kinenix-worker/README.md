@@ -20,7 +20,7 @@ Requires Python 3.10 or newer. To report to a Kinenix Hub, run `kinenix connect 
 
 ### Key Capabilities
 - **Lightweight Execution:** Minimal overhead with direct integration into `kinenix-core`.
-- **Sandbox Workspace Isolation:** Executes project bundles inside disposable, per-job sandbox environments.
+- **Separate copy per run (`--sandbox`):** Runs a bundle from its own copy in `~/.kinenix/workspaces/<job_id>`, so a run does not change the original folder. It is not isolation: the flow keeps the rights of the user who runs the worker.
 - **Hardware Telemetry:** Gathers CPU, memory, architecture, and platform metrics at runtime.
 - **Structured JSON Auditing:** Stores hierarchical execution traces and error telemetry locally.
 
@@ -90,7 +90,7 @@ Kinenix Worker System Information:
 kinenix-worker run flows/examples/rpachallenge
 ```
 
-To run inside an isolated sandbox directory:
+To run from a separate copy of the bundle (the original folder stays unchanged):
 ```bash
 kinenix-worker run flows/examples/rpachallenge --sandbox
 ```
@@ -210,6 +210,6 @@ options:
 
 ### `kinenix-worker run` Options
 - `flow_path`: Flow name, project bundle directory, or path to a `flow.md`.
-- `--sandbox`: Execute inside an isolated temporary sandbox (`~/.kinenix/workspaces/<job_id>`).
+- `--sandbox`: Run from a separate copy of the bundle in `~/.kinenix/workspaces/<job_id>`. The flow's outputs stay in that copy; its `.env` files are deleted when the run ends. Not isolation: the flow has the same rights as without it.
 - `--vars`: JSON string of variables to override.
 - `--log-dir`: Also write a local JSON execution log to this directory. Telemetry to the Hub does not depend on it.

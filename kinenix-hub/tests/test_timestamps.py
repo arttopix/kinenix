@@ -7,7 +7,7 @@ from kinenix_hub import config as hub_config
 from kinenix_hub.app import app
 from kinenix_hub.timeutils import isoformat_utc, parse_timestamp, to_utc_naive
 
-client = TestClient(app, client=("127.0.0.1", 50000))
+client = TestClient(app, base_url="http://127.0.0.1:8080", client=("127.0.0.1", 50000))
 
 
 @pytest.fixture(autouse=True)

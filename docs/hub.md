@@ -212,6 +212,7 @@ curl.exe -u admin:<strong-password> http://<hub-ip>:8080/api/v1/executions
 - **Signing out:** Browsers cache Basic Auth credentials until the browser is closed; there is no logout button.
 - **Single account:** There is one shared dashboard account. Per-user accounts and roles are not implemented.
 - **Reverse proxy:** As with the worker key, always set the password when a reverse proxy on the same machine forwards requests.
+- **Localhost-only names:** Without a key or password, the Hub answers only requests addressed to `localhost`, `127.0.0.1`, `[::1]`, or this machine's own name. A web page whose name was made to point at this machine (DNS rebinding) is refused, so it cannot read runs from your browser. Open the dashboard as `http://localhost:8080`.
 
 ---
 

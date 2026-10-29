@@ -10,7 +10,7 @@ from kinenix_hub import console as hub_console
 from kinenix_hub.app import app
 from kinenix_hub.services.telemetry_service import STEP_FIELDS, step_summaries
 
-client = TestClient(app, client=("127.0.0.1", 50000))
+client = TestClient(app, base_url="http://127.0.0.1:8080", client=("127.0.0.1", 50000))
 remote_client = TestClient(app, client=("192.168.1.77", 50000))
 
 PAYLOAD = {

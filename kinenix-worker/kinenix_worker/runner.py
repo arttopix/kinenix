@@ -119,6 +119,8 @@ class WorkerRunner:
             ctx = interpreter.run_flow(flow_def, initial_vars={"__flow_dir__": str(work_dir)})
         finally:
             self.client.set_task(None)
+            if use_sandbox:
+                self._remove_secrets(work_dir)
         duration = round(time.time() - start_time, 2)
 
         result = {
@@ -137,6 +139,21 @@ class WorkerRunner:
         }
 
         return result
+
+    @staticmethod
+    def _remove_secrets(copy_dir: Path) -> None:
+        """
+        Deletes the .env files of a --sandbox copy once its run is over, so passwords do not pile up in
+        ~/.kinenix/workspaces (docs/design/threat-model.md, T12). The run read them at its start; the
+        flow's outputs in the copy are kept.
+        """
+        for env_file in copy_dir.rglob(".env*"):
+            name = env_file.name
+            if env_file.is_file() and (name == ".env" or name.startswith(".env.")) and name != ".env.example":
+                try:
+                    env_file.unlink()
+                except OSError as e:
+                    logger.warning(f"The run's copy still has {env_file}, which could not be removed: {e}")
 
     @staticmethod
     def _error_summary(ctx: Any) -> Optional[str]:

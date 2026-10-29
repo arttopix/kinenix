@@ -21,7 +21,7 @@ This document describes how Kinenix is structured: its principles, modules, exec
 | Module | Role | Current implementation | Target |
 | :--- | :--- | :--- | :--- |
 | **`kinenix-core`** | Flow interpreter, variable evaluator, action plugins, `kinenix` CLI | Python 3.10+, Pydantic, Playwright, openpyxl, pandas | Same |
-| **`kinenix-worker`** | Runs flows unattended on target machines | CLI with `run`, `watch`, `schedule`, `daemon`; optional per-job sandbox workspace | Persistent WebSocket client receiving jobs from the Hub |
+| **`kinenix-worker`** | Runs flows unattended on target machines | CLI with `run`, `watch`, `schedule`, `daemon`; optional separate copy of the bundle per run (`--sandbox`, not isolation) | Persistent WebSocket client receiving jobs from the Hub |
 | **`kinenix-studio`** | Flow authoring and debugging | FastAPI backend + React/Vite web UI: flow discovery, editing, validation, run | Tauri desktop shell, persistent browser sessions, element picker, live debugger |
 | **`kinenix-hub`** | Central monitoring and control | FastAPI + SQLAlchemy (SQLite default); receives heartbeats and telemetry over HTTP; web dashboard; AI failure summaries; API key auth | Job dispatch over WebSocket, PostgreSQL + Redis queue, ROI dashboard, LINE/Teams/Email alerts |
 
