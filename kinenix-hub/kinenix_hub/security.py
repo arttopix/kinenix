@@ -2,7 +2,8 @@ import hashlib
 import ipaddress
 import logging
 import secrets
-from typing import Dict, Optional
+import socket
+from typing import Dict, Optional, Set
 
 from fastapi import HTTPException, Request, Security, status
 from fastapi.security import APIKeyHeader, HTTPBasic, HTTPBasicCredentials
@@ -56,10 +57,37 @@ def _dashboard_password_matches(provided: Optional[str]) -> bool:
     return False
 
 
+def _local_names() -> Set[str]:
+    """Host names a browser or worker on this machine uses for a Hub that needs no key or password."""
+    names = {"localhost", "127.0.0.1", "::1"}
+    hostname = socket.gethostname().lower()
+    names |= {hostname, f"{hostname}.local", socket.getfqdn().lower()}
+    return names
+
+
+def _request_host(request: Request) -> str:
+    """The Host header without its port: `[::1]:8080` -> `::1`, `localhost:8080` -> `localhost`."""
+    host = request.headers.get("host", "").strip().lower()
+    if host.startswith("["):
+        return host[1:].split("]", 1)[0]
+    host = host.rsplit(":", 1)[0] if host.count(":") == 1 else host
+    return host.rstrip(".")  # "localhost." is the same name
+
+
 def _allow_loopback_only(request: Request, setting_name: str) -> None:
     client_host = request.client.host if request.client else None
     if _is_loopback(client_host):
-        return
+        # A web page whose own name was made to resolve to this machine (DNS rebinding) also connects from
+        # localhost, but its requests carry its own name as Host: it must not read or send runs without the
+        # key or password (docs/design/threat-model.md, T4)
+        host = _request_host(request)
+        if host in _local_names():
+            return
+        logger.warning(f"Rejected request for Host '{host}' from this machine: {setting_name} is not configured.")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"Open the Hub as http://localhost or http://127.0.0.1, or set {setting_name} on the Hub.",
+        )
     logger.warning(f"Rejected request from {client_host}: {setting_name} is not configured.")
     raise HTTPException(
         status_code=status.HTTP_403_FORBIDDEN,

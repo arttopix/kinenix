@@ -100,7 +100,7 @@ The same objects appear in every command and in the MCP server; their fields fol
 | `kinenix hub status` | | workers, recent runs | read-only | text |
 | `kinenix connect` | | Hub in use and whether it answers | read-only (without a URL) | text |
 
-**Side effects of a flow** are derived from its actions, so `describe` and a confirmation can say what a run will do: `email` (`email.send`), `files` (writes, moves, deletes), `web` (clicks and typing on a site), `network` (HTTP calls), `none`. Each action declares its kind in code (an attribute next to `accepted_parameters`).
+**Side effects of a flow** are derived from its actions, so `describe` and a confirmation can say what a run will do: `email` (`email.send`), `files` (writes, moves, deletes), `web` (clicks and typing on a site), `network` (HTTP calls), `none`. Each action declares its kind in code (an attribute next to `accepted_parameters`). For `files`, `describe` and `--dry-run` also name the paths a run writes, moves, or deletes outside its bundle, so a flow from someone else cannot touch other folders unnoticed ([threat-model.md](threat-model.md), T1).
 
 **`--dry-run`** compiles and validates the flow, resolves its config and inputs, and lists the steps and side effects it would run, without running any action.
 

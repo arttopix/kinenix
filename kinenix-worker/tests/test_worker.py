@@ -54,3 +54,23 @@ def test_worker_result_carries_the_exit_code_and_run_id(tmp_path: Path):
     assert result["has_error"] is True
     assert result["exit_code"] == exit_codes.BUSINESS
     assert result["run_id"] and any(result["run_id"] in p.name for p in (tmp_path / "logs").rglob("*.json*"))
+
+
+def test_sandbox_copy_keeps_outputs_but_not_the_env_file(tmp_path: Path, monkeypatch):
+    """docs/design/threat-model.md, T12: passwords from .env do not pile up in ~/.kinenix/workspaces."""
+    monkeypatch.setattr(Path, "home", lambda: tmp_path / "home")
+    bundle = tmp_path / "bot"
+    bundle.mkdir()
+    (bundle / ".env").write_text("BOT_PASSWORD=hunter22\n", encoding="utf-8")
+    (bundle / ".env.example").write_text("BOT_PASSWORD=\n", encoding="utf-8")
+    (bundle / ".envrc").write_text("not a secrets file\n", encoding="utf-8")
+    (bundle / "flow.md").write_text(
+        "# Bot\n\n## Steps\n\n### 1. Write (`file.write_text`)\n- **path:** ./output/done.txt\n"
+        "- **content:** ${len(env.BOT_PASSWORD)}\n", encoding="utf-8")
+    result = WorkerRunner().execute_flow(str(bundle), use_sandbox=True, log_dir=str(tmp_path / "logs"))
+    assert result["status"] == "success"
+    copy = tmp_path / "home" / ".kinenix" / "workspaces" / result["job_id"]
+    assert (copy / "output" / "done.txt").read_text(encoding="utf-8") == "8"  # the run read the password
+    assert not (copy / ".env").exists()
+    assert (copy / ".env.example").exists() and (copy / ".envrc").exists()
+    assert (bundle / ".env").exists()  # the original bundle is not touched

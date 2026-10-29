@@ -17,7 +17,7 @@ from kinenix_hub.services.run_records import (
     short_text,
 )
 
-client = TestClient(app, client=("127.0.0.1", 50000))
+client = TestClient(app, base_url="http://127.0.0.1:8080", client=("127.0.0.1", 50000))
 
 
 def _step(step_id, name, action, status, **extra):

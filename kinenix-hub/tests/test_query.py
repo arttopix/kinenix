@@ -19,7 +19,7 @@ from kinenix_hub.database import Base
 from kinenix_hub.migrations import run_migrations
 from kinenix_hub.views import apply_user_views, create_views
 
-client = TestClient(app, client=("127.0.0.1", 50000))
+client = TestClient(app, base_url="http://127.0.0.1:8080", client=("127.0.0.1", 50000))
 remote_client = TestClient(app, client=("192.168.1.77", 50000))
 
 RUN = {
