@@ -132,7 +132,7 @@ Stable names; the message may change, the code may not. Each says whether retryi
 
 Only what cannot be added later without breaking anyone:
 
-1. **Exit codes** of section 4 for `kinenix run`, `validate`, `connect`, and `kinenix hub ...`, written into the stability promise (`docs/compatibility.md`).
+1. **Exit codes** of section 4 for `kinenix run`, `validate`, `connect`, and `kinenix hub ...`, written into the stability promise ([compatibility.md](../compatibility.md)).
 2. **`run_id` early:** `kinenix run` prints `Run <run_id>` as its first line, and every command that takes a run id accepts the `run_id` (the Hub's `execution_id` keeps working).
 3. **What is stable:** the stability promise says that exit codes, `--json` output (when it exists), the JSON Schemas, and the Hub views are stable, and that text meant for people is not.
 4. **One implementation:** new commands in 0.4.0b1 to 1.0.0 put their logic in a function that returns data; `cli.py` only parses and prints (the rule goes into `.agents/rules/architecture.md`).
