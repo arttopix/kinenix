@@ -54,3 +54,26 @@ def test_worker_result_carries_the_exit_code_and_run_id(tmp_path: Path):
     assert result["has_error"] is True
     assert result["exit_code"] == exit_codes.BUSINESS
     assert result["run_id"] and any(result["run_id"] in p.name for p in (tmp_path / "logs").rglob("*.json*"))
+
+
+def test_worker_run_finishes_when_the_hub_is_down(tmp_path: Path):
+    """Failure injection (1.0.0): heartbeats and telemetry fail, the run still completes and keeps its log."""
+    import os
+    import socket
+    import subprocess
+    import sys
+    with socket.socket() as s:
+        s.bind(("127.0.0.1", 0))
+        port = s.getsockname()[1]
+    bundle = tmp_path / "slow"
+    bundle.mkdir()
+    # Long enough for several heartbeats, which must not each print a warning
+    (bundle / "flow.md").write_text("# Slow\n\n## Steps\n\n### 1. Wait (`logic.delay`)\n- **seconds:** 3\n", encoding="utf-8")
+    env = {**os.environ, "KINENIX_HUB_URL": f"http://127.0.0.1:{port}", "KINENIX_HEARTBEAT_INTERVAL": "0.5"}
+    result = subprocess.run([sys.executable, "-m", "kinenix_worker.cli", "run", str(bundle), "--log-dir", str(tmp_path / "logs")],
+                            cwd=tmp_path, env=env, capture_output=True, text=True, timeout=120)
+    output = result.stdout + result.stderr
+    assert result.returncode == exit_codes.OK, output
+    assert list((tmp_path / "logs").rglob("*_success.json"))
+    assert output.count("Heartbeat to Hub") == 1, output
+    assert output.count("The run was not sent to the Hub") == 1, output
