@@ -145,7 +145,7 @@ def parse_value(val_str: str) -> Any:
     if (val_str.startswith("{") and val_str.endswith("}")) or (val_str.startswith("[") and val_str.endswith("]")):
         try:
             return json.loads(val_str)
-        except Exception:
+        except Exception:  # nosec B110: not JSON, so the value stays text
             pass
 
     # Quoted strings: "string" or 'string'

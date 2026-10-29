@@ -102,7 +102,7 @@ def resolve_subflow_path(flow_target: str, context: Any) -> Path:
         resolved = resolve_flow_path(target_str)
         if resolved and resolved.is_file():
             return resolved.resolve()
-    except Exception:
+    except Exception:  # nosec B110: not found by name either; the caller reports the subflow as missing
         pass
 
     raise FileNotFoundError(f"Subflow file not found: '{flow_target}'")

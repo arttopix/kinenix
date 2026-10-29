@@ -125,7 +125,7 @@ def objects(conn: _Connection) -> Dict[str, str]:
 
 
 def columns_of(conn: _Connection, name: str) -> List[str]:
-    return [d[0] for d in conn.execute(f'SELECT * FROM "{name}" LIMIT 0').description]
+    return [d[0] for d in conn.execute(f'SELECT * FROM "{name}" LIMIT 0').description]  # nosec B608: name is checked against objects()
 
 
 def parse_since(value: str, now: Optional[datetime.datetime] = None) -> str:
@@ -196,7 +196,7 @@ def build_select(conn: _Connection, name: str, since: Optional[str] = None, flow
         conditions.append(f'"{column}" = ?')
         params.append(_number_or_text(value))
 
-    sql = f'SELECT * FROM "{name}"'
+    sql = f'SELECT * FROM "{name}"'  # nosec B608: name and columns are checked against the database; values are ? parameters
     if conditions:
         sql += " WHERE " + " AND ".join(conditions)
     if time_column:
@@ -247,7 +247,7 @@ def catalog(conn: _Connection, views_dir: Optional[Path] = None) -> List[Dict[st
     for name, kind in objects(conn).items():
         conn.start_clock()
         try:
-            rows = conn.execute(f'SELECT COUNT(*) FROM "{name}"').fetchone()[0]
+            rows = conn.execute(f'SELECT COUNT(*) FROM "{name}"').fetchone()[0]  # nosec B608: name comes from objects()
         except sqlite3.DatabaseError:
             rows = None  # a user view that no longer works
         entry = entries.get(name)
@@ -319,7 +319,7 @@ def latest_runs(conn: _Connection, flow: Optional[str] = None, run: Optional[str
     if run:
         conditions.append("(execution_id LIKE ? OR run_id LIKE ?)")
         params += [f"{run.strip()}%", f"{run.strip()}%"]
-    sql = f"SELECT {', '.join(RUN_COLUMNS)} FROM v_runs"
+    sql = f"SELECT {', '.join(RUN_COLUMNS)} FROM v_runs"  # nosec B608: fixed column names; values are ? parameters
     if conditions:
         sql += " WHERE " + " AND ".join(conditions)
     sql += " ORDER BY started_at DESC LIMIT ?"

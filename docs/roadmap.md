@@ -133,7 +133,7 @@ Before the release candidate:
 - [x] `kinenix run` prints `Run <run_id>` as its first line, and every command that takes a run accepts its `run_id`
 - [x] Deprecations announced for 2.0, with a warning when used: the `orchestrator` names and `ORCHESTRATOR_*` variables, `on_error: retry`, `fallback_step_id`, `kinenix export-md`
 - [ ] Threat model of kinenix-core, kinenix-worker, and kinenix-hub (flows from others running code, secrets in logs and on the Hub, access to the Hub on the LAN without HTTPS, `hub query` changing data, file paths leaving their folder, dashboard XSS), and a code and security review against it, with every finding fixed or moved to a milestone
-- [ ] Security checks in CI on every pull request: `pip-audit` (no dependency with a known vulnerability) and `bandit` (every finding fixed or explained in the code)
+- [x] Security checks in CI on every pull request: `pip-audit` (no dependency with a known vulnerability) and `bandit` (every finding fixed or explained in the code)
 - [ ] Failure-injection tests: the Hub is down or slow during a run (the run completes, the log is kept, one warning); an input file is missing; the browser closes in the middle of a loop (Finally still runs, no browser process is left)
 - [x] `docs/releasing.md` installs from TestPyPI without its broken copies of other packages
 - [ ] Release `1.0.0rc1` (2026-10-31)

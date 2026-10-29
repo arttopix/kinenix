@@ -42,7 +42,7 @@ SELECT
     e.error_message,
     {_json("e.details", "report_md", "report_md")}
 FROM executions e
-""",
+""",  # nosec B608: fixed SQL; _json() takes only the constant names written here
     "v_failures": f"""
 SELECT
     f.id AS failure_id,
@@ -71,7 +71,7 @@ SELECT
     e.status AS run_status
 FROM failures f
 LEFT JOIN executions e ON e.id = f.execution_id
-""",
+""",  # nosec B608: fixed SQL
     "v_steps": f"""
 SELECT
     s.id AS step_result_id,
@@ -99,7 +99,7 @@ SELECT
     {_json("s.details", "output", "output")}
 FROM step_results s
 LEFT JOIN executions e ON e.id = s.execution_id
-""",
+""",  # nosec B608: fixed SQL
 }
 
 
@@ -153,7 +153,7 @@ def apply_user_views(engine: Engine, folder: Optional[Path]) -> List[Tuple[str, 
                 with engine.begin() as conn:
                     conn.execute(text(f'DROP VIEW IF EXISTS "{name}"'))
                     conn.exec_driver_sql(f'CREATE VIEW "{name}" AS {select}')
-                    conn.exec_driver_sql(f'SELECT * FROM "{name}" LIMIT 0')
+                    conn.exec_driver_sql(f'SELECT * FROM "{name}" LIMIT 0')  # nosec B608: name matches custom_\w+
                 created.append(name)
             except Exception as e:  # any SQL error in a user's file
                 errors[name] = str(getattr(e, "orig", None) or e).splitlines()[0]
