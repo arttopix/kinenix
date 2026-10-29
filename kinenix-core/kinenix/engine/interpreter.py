@@ -91,6 +91,13 @@ def resolve_subflow_path(flow_target: str, context: Any) -> Path:
             if found:
                 return found
 
+    # A path written relative to the bundle (./subflows/x.md) means that file only. Looking further, in the
+    # current folder or among the flows by name, could run another flow that happens to share the name
+    # (docs/design/threat-model.md, T1)
+    has_bundle = context.get_variable("__flow_dir__") or context.get_variable("__flow_file_dir__")
+    if has_bundle and target_str.startswith(("./", "../", ".\\", "..\\")):
+        raise FileNotFoundError(f"Subflow file not found: '{flow_target}' (relative to the bundle folder)")
+
     # 3. Direct path or relative to current working directory
     found = _flow_file(Path(target_str).resolve())
     if found:
