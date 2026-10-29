@@ -194,7 +194,8 @@ class ExecutionLogger:
             api_key = get_env("KINENIX_HUB_API_KEY")
             if api_key:
                 headers["X-API-Key"] = api_key
-            res = requests.post(target_endpoint, json=payload, headers=headers, timeout=4)
+            from ..connect import TIMEOUT
+            res = requests.post(target_endpoint, json=payload, headers=headers, timeout=TIMEOUT)
             if res.status_code == 200:
                 self.logger.info(f"Transmitted telemetry to Hub: {clean_url}")
             elif res.status_code in (401, 403):

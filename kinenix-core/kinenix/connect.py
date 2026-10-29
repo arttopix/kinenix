@@ -50,6 +50,10 @@ def describe_unreachable(url: str, error: requests.RequestException) -> str:
         hint = " Names ending in .local need mDNS (Avahi) on both machines." if host.endswith(".local") else ""
         return (f"Cannot find the address of '{host}'. Check the name, or use the Hub's IP address "
                 f"(on the Hub: hostname -I).{hint}")
+    if isinstance(error, requests.ReadTimeout):
+        # The connection was accepted, so nothing blocks the port: the Hub is busy or stuck
+        return (f"{host} accepted the connection on port {port} but did not answer within {TIMEOUT} s; "
+                f"the Hub may be busy or stuck (on the Hub: kinenix hub status, or restart it).")
     if isinstance(error, requests.Timeout):
         return f"No answer from {host} on port {port} within {TIMEOUT} s; a firewall may block the port."
     return (f"{host} was found, but nothing accepts connections on port {port}: the Hub is not running there, "
