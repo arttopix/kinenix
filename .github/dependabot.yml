@@ -1,0 +1,15 @@
+# Keeps the pinned GitHub Actions current (they are pinned to commits, so they never update on their own).
+# Python dependencies are covered by Dependabot security updates (repository settings) and pip-audit in CI;
+# their pyproject.toml lower bounds are raised by hand, not on every release of a dependency.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    target-branch: dev
+    schedule:
+      interval: weekly
+    groups:
+      actions:
+        patterns: ["*"]
+    commit-message:
+      prefix: ci

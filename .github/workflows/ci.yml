@@ -5,6 +5,9 @@ on:
     branches: [main, dev]
   pull_request:
     branches: [main, dev]
+  # Weekly, so a vulnerability published while nobody opens a pull request is still found (job Security checks)
+  schedule:
+    - cron: "0 1 * * 1"
   workflow_dispatch:
 
 permissions:
@@ -28,9 +31,11 @@ jobs:
           - os: windows-latest
             python-version: "3.10"
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
 
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
         with:
           python-version: ${{ matrix.python-version }}
           cache: pip
@@ -67,9 +72,11 @@ jobs:
     name: Package build and install
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
 
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
         with:
           python-version: "3.12"
 
@@ -112,6 +119,37 @@ jobs:
           /tmp/clean/bin/kinenix run smoke-bot
           grep -q "Hello, Somchai!" flows/smoke-bot/output/greetings.csv
 
+  security:
+    name: Security checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        with:
+          python-version: "3.12"
+
+      - name: Install the checkers
+        run: python -m pip install pip-audit bandit zizmor
+
+      # What a user gets from PyPI: the three published packages and their dependencies, without the dev tools
+      - name: Dependencies with known vulnerabilities (pip-audit)
+        run: |
+          python -m venv /tmp/audit
+          /tmp/audit/bin/pip install ./kinenix-core ./kinenix-hub ./kinenix-worker
+          /tmp/audit/bin/pip freeze --exclude kinenix --exclude kinenix-hub --exclude kinenix-worker > /tmp/requirements.txt
+          python -m pip_audit -r /tmp/requirements.txt --no-deps --disable-pip --progress-spinner off
+
+      # Every finding is fixed, or explained next to the code with `# nosec <test id>: <reason>` (.agents/rules/security.md)
+      - name: Static analysis of the published packages (bandit)
+        run: python -m bandit -q -r kinenix-core/kinenix kinenix-hub/kinenix_hub kinenix-worker/kinenix_worker
+
+      # The workflows themselves: actions pinned to a commit, no token left on the runner, no ${{ }} in scripts
+      - name: GitHub Actions workflows (zizmor)
+        run: zizmor --offline --min-severity medium .github/workflows
+
   studio-frontend:
     name: Studio frontend build
     runs-on: ubuntu-latest
@@ -119,9 +157,11 @@ jobs:
       run:
         working-directory: kinenix-studio/frontend
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
 
-      - uses: actions/setup-node@v5
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
         with:
           node-version: 22
           cache: npm

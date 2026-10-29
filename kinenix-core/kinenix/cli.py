@@ -130,7 +130,7 @@ def discover_flows() -> Dict[str, Tuple[Path, str]]:
                         discovered[rel_str] = (flow_file, name)
                 except ValueError:
                     pass
-            except Exception:
+            except Exception:  # nosec B112: a folder that cannot be read is left out of the list
                 continue
     return discovered
 
@@ -308,9 +308,9 @@ def main():
         sys.exit(0)
 
     elif args.command == "install-browsers":
-        import subprocess
+        import subprocess  # nosec B404: runs only the fixed install command below
         print("Installing Playwright Chromium browser for kinenix...")
-        res = subprocess.run([sys.executable, "-m", "playwright", "install", "chromium"])
+        res = subprocess.run([sys.executable, "-m", "playwright", "install", "chromium"])  # nosec B603: fixed arguments
         if res.returncode == 0:
             print("Chromium browser successfully installed.")
         else:

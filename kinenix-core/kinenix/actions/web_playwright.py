@@ -2,7 +2,7 @@ import logging
 import os
 import re
 import time
-import subprocess
+import subprocess  # nosec B404: runs only the fixed Playwright install command below
 import sys
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional
@@ -36,7 +36,7 @@ def _launch_browser_with_auto_install(pw: Playwright, headless: bool) -> Browser
             return pw.chromium.launch(headless=True)
         if "Executable doesn't exist" in err_msg or "Please run the following command" in err_msg:
             logger.info("Playwright Chromium browser not detected. Installing Chromium automatically (first run only)...")
-            res = subprocess.run([sys.executable, "-m", "playwright", "install", "chromium"])
+            res = subprocess.run([sys.executable, "-m", "playwright", "install", "chromium"])  # nosec B603: fixed arguments
             if res.returncode != 0:
                 raise RuntimeError(
                     "Failed to auto-install Chromium. Please run in terminal: playwright install chromium"
