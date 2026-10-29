@@ -36,6 +36,7 @@ Each topic has one owning document. Other files link here instead of repeating t
 | [ask_router.md](ask_router.md) | Natural-language questions to the Hub (work in progress) |
 | [../kinenix-worker/README.md](../kinenix-worker/README.md) | Worker CLI and Raspberry Pi setup |
 | [../CHANGELOG.md](../CHANGELOG.md) | Changes and upgrade notes of each release |
+| [compatibility.md](compatibility.md) | What stays stable for all of 1.x, what may change, deprecations, and upgrading |
 | [releasing.md](releasing.md) | Publishing `kinenix`, `kinenix-hub`, and `kinenix-worker` to PyPI with Trusted Publishing |
 | [../kinenix-studio/README.md](../kinenix-studio/README.md) | Studio design and layout |
 
