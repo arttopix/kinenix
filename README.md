@@ -6,8 +6,8 @@
 [![Python](https://img.shields.io/badge/Python-3.10%2B-brightgreen.svg?style=flat-square)](#)
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg?style=flat-square)](LICENSE)
 
-> **Open-source, local-first RPA in Python.**  
-> Write flows as plain Markdown, or let your AI assistant write them. Run them on any PC or Raspberry Pi with free unattended workers, automate Excel without Office, and track every run in a self-hosted Hub. Optional local AI steps via Ollama.
+> **Open-source Python framework for automation flows written in Markdown.**  
+> Describe the task, let your AI assistant write the flow, then run it on any PC or Raspberry Pi. Free unattended workers and a self-hosted Hub for every run.
 
 > **Status: 1.0 release candidate.** From 1.0.0, the `flow.md` format, the CLI commands and exit codes, the log format, and the Hub's data stay compatible for all of 1.x ([compatibility.md](docs/compatibility.md)). Feedback and contributions are welcome.
 
