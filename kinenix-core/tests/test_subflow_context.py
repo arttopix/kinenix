@@ -142,3 +142,19 @@ def test_hello_example_calls_its_subflow(tmp_path):
     ctx = FlowInterpreter().run_flow(flow, initial_vars={"__flow_dir__": str(project)})
     assert not ctx.has_error, ctx.failure_details
     assert "Hello, Malee!" in (project / "output" / "greetings.csv").read_text(encoding="utf-8-sig")
+
+
+def test_a_missing_bundle_subflow_never_runs_a_flow_found_elsewhere(tmp_path, monkeypatch):
+    """docs/design/threat-model.md, T1: ./subflows/x.md that is missing fails; it does not run a flow with the
+    same path in the current folder or a flow found by name."""
+    bundle = make_bundle(tmp_path, {"greeting": "hi", "extra": "x"})
+    elsewhere = tmp_path / "elsewhere"
+    write(elsewhere / "subflows" / "writer.md", WRITER)  # same relative path, outside the bundle
+    monkeypatch.chdir(elsewhere)
+    ctx = run(bundle, call("./subflows/writer.md"))
+    assert ctx.has_error and "relative to the bundle folder" in ctx.failure_details.error_message
+    assert not (bundle / "output" / "from_subflow.txt").exists()
+    assert not (elsewhere / "output" / "from_subflow.txt").exists()
+    issues = validate_subflows(markdown_to_flow(call("./subflows/writer.md")), bundle)
+    assert issues and "not found" in issues[0]
+

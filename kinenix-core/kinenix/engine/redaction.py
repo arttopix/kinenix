@@ -10,14 +10,16 @@ from typing import Any, Dict, Iterable, List, Mapping, Optional, Set
 MASK = "****"
 
 # Key names whose values are secret, in parameters, config, variables, and outputs
-# (anywhere in the name, or the whole name for words that also appear in harmless names such as cookie_banner)
+# (anywhere in the name, or the whole name for words that also appear in harmless names such as cookie_banner;
+# pin and otp only as a word of the name, since they are also inside shipping, spinner, and footprint)
 SECRET_KEY = re.compile(
-    r"password|passwd|secret|token|api[_-]?key|authorization|private[_-]?key"
+    r"password|passwd|passcode|secret|token|api[_-]?key|authorization|private[_-]?key"
+    r"|(?:^|[_\-. ])(?:pin|otp)(?:$|[_\-. ])"
     r"|^(?:pwd|cookies?|set-cookie|credentials?)$", re.I)
 
 # `password=...`, `token: ...`, `Authorization: Bearer ...` inside text such as URLs and error messages
 SECRET_PAIR = re.compile(
-    r"(?P<key>\b[\w-]*(?:password|passwd|pwd|secret|token|api[_-]?key|authorization)[\w-]*\b[\"']?\s*[=:]\s*[\"']?)"
+    r"(?P<key>\b[\w-]*(?:password|passwd|passcode|pwd|secret|token|api[_-]?key|authorization)[\w-]*\b[\"']?\s*[=:]\s*[\"']?)"
     r"(?P<value>(?:bearer\s+|basic\s+)?[^\s&\"',;]+)", re.I)
 
 # Kinenix settings that are not secret, so their values stay readable when they come from .env

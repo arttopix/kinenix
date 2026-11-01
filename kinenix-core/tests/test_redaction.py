@@ -28,6 +28,17 @@ def test_values_under_secret_keys_are_hidden_everywhere():
     assert data["config"]["smtp_password"] == "hunter22"  # the original is not changed
 
 
+def test_pin_otp_and_passcode_are_secret_names_only_as_words():
+    """docs/design/threat-model.md, T2."""
+    r = Redactor()
+    for name in ("PIN", "BANK_PIN", "pin_code", "card-pin", "OTP", "user-otp", "otp.value", "passcode", "PASSCODE_2FA"):
+        assert r.is_secret_key(name), name
+    for name in ("shipping_address", "spinner", "footprint", "pinned_tab", "option", "topping"):
+        assert not r.is_secret_key(name), name
+    assert r.redact({"bank_pin": "4321", "shipping": "EMS"}) == {"bank_pin": "****", "shipping": "EMS"}
+    assert Redactor({"BANK_PIN": "88990011"}).redact("typed 88990011") == "typed ****"
+
+
 def test_secret_pairs_in_text_are_hidden():
     r = Redactor()
     assert r.redact("GET https://x.test/api?token=abc123&page=2") == "GET https://x.test/api?token=****&page=2"

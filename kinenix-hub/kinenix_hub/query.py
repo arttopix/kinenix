@@ -41,7 +41,12 @@ class _Connection(sqlite3.Connection):
 
 
 class QueryError(Exception):
-    """A query that cannot run; the message says why and what to do."""
+    """A question the Hub database cannot answer; exit_code tells wrong use (2) from not found (7)."""
+
+    def __init__(self, message: str, exit_code: int = 2):
+        super().__init__(message)
+        self.exit_code = exit_code
+
 
 
 @dataclass
@@ -67,7 +72,7 @@ def database_path(database_url: str) -> Path:
 def connect(path: Path, hide_raw_log: bool = False, time_limit: float = TIME_LIMIT_SECONDS) -> _Connection:
     """A read-only connection that can only read, and stops a query after `time_limit` seconds."""
     if not path.is_file():
-        raise QueryError(f"No Hub database at {path}. Start the Hub once, or query a Hub on another machine with --url.")
+        raise QueryError(f"No Hub database at {path}. Start the Hub once, or query a Hub on another machine with --url.", exit_code=7)
     conn = sqlite3.connect(f"file:{path.as_posix()}?mode=ro", uri=True, check_same_thread=False, factory=_Connection)
 
     def authorize(action, arg1, arg2, database, source):
@@ -119,8 +124,18 @@ def objects(conn: _Connection) -> Dict[str, str]:
     return {name: kind for name, kind in rows}
 
 
+def known_name(conn: _Connection, name: str) -> str:
+    """The table or view called `name`, spelled as the database returns it, so SQL is built only from names
+    the database itself gave (CodeQL py/sql-injection); QueryError (not found) for any other text."""
+    for known in objects(conn):
+        if known == name:
+            return known
+    raise QueryError(f"'{name}' is not a table or view. Run kinenix hub query --list to see them.", exit_code=7)
+
+
 def columns_of(conn: _Connection, name: str) -> List[str]:
-    return [d[0] for d in conn.execute(f'SELECT * FROM "{name}" LIMIT 0').description]
+    """Columns of `name`, a name from objects() or known_name()."""
+    return [d[0] for d in conn.execute(f'SELECT * FROM "{name}" LIMIT 0').description]  # nosec B608: name comes from the database
 
 
 def parse_since(value: str, now: Optional[datetime.datetime] = None) -> str:
@@ -161,9 +176,7 @@ def build_select(conn: _Connection, name: str, since: Optional[str] = None, flow
                  worker: Optional[str] = None, status: Optional[str] = None,
                  filters: Optional[Dict[str, str]] = None, limit: int = DEFAULT_LIMIT) -> Tuple[str, List[Any]]:
     """SELECT for a table or view with the --since, --flow, --worker, --status, and --filter conditions."""
-    known = objects(conn)
-    if name not in known:
-        raise QueryError(f"'{name}' is not a table or view. Run kinenix hub query --list to see them.")
+    name = known_name(conn, name)
     columns = columns_of(conn, name)
     conditions: List[str] = []
     params: List[Any] = []
@@ -191,7 +204,7 @@ def build_select(conn: _Connection, name: str, since: Optional[str] = None, flow
         conditions.append(f'"{column}" = ?')
         params.append(_number_or_text(value))
 
-    sql = f'SELECT * FROM "{name}"'
+    sql = f'SELECT * FROM "{name}"'  # nosec B608: name and columns are checked against the database; values are ? parameters
     if conditions:
         sql += " WHERE " + " AND ".join(conditions)
     if time_column:
@@ -242,7 +255,7 @@ def catalog(conn: _Connection, views_dir: Optional[Path] = None) -> List[Dict[st
     for name, kind in objects(conn).items():
         conn.start_clock()
         try:
-            rows = conn.execute(f'SELECT COUNT(*) FROM "{name}"').fetchone()[0]
+            rows = conn.execute(f'SELECT COUNT(*) FROM "{name}"').fetchone()[0]  # nosec B608: name comes from objects()
         except sqlite3.DatabaseError:
             rows = None  # a user view that no longer works
         entry = entries.get(name)
@@ -253,9 +266,7 @@ def catalog(conn: _Connection, views_dir: Optional[Path] = None) -> List[Dict[st
 
 def describe(conn: _Connection, name: str, views_dir: Optional[Path] = None) -> Dict[str, Any]:
     """Columns of a table or view with their meaning and example, from the data dictionary (--describe)."""
-    known = objects(conn)
-    if name not in known:
-        raise QueryError(f"'{name}' is not a table or view. Run kinenix hub query --list to see them.")
+    name = known_name(conn, name)
     entries = dictionary.load()
     entry = entries.get(name)
     columns = []
@@ -265,7 +276,7 @@ def describe(conn: _Connection, name: str, views_dir: Optional[Path] = None) -> 
     details = entries.get(f"{name}.details")
     return {
         "name": name,
-        "type": known[name],
+        "type": objects(conn)[name],
         "about": entry.description if entry else "",
         "doc": "" if entry else user_view_doc(views_dir, name),
         "columns": columns,
@@ -314,7 +325,7 @@ def latest_runs(conn: _Connection, flow: Optional[str] = None, run: Optional[str
     if run:
         conditions.append("(execution_id LIKE ? OR run_id LIKE ?)")
         params += [f"{run.strip()}%", f"{run.strip()}%"]
-    sql = f"SELECT {', '.join(RUN_COLUMNS)} FROM v_runs"
+    sql = f"SELECT {', '.join(RUN_COLUMNS)} FROM v_runs"  # nosec B608: fixed column names; values are ? parameters
     if conditions:
         sql += " WHERE " + " AND ".join(conditions)
     sql += " ORDER BY started_at DESC LIMIT ?"

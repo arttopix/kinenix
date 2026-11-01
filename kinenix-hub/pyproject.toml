@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "kinenix-hub"
 dynamic = ["version"]
-description = "Kinenix Hub: central server that receives worker heartbeats and execution logs, with a web dashboard and AI failure summaries"
+description = "Kinenix Hub: a self-hosted server that records every run and heartbeat of your Kinenix workers, with a dashboard and read-only queries"
 readme = "README.md"
 license = "Apache-2.0"
 license-files = ["LICENSE", "NOTICE"]
@@ -22,10 +22,10 @@ classifiers = [
     "Topic :: Office/Business",
     "Topic :: System :: Monitoring",
 ]
-requires-python = ">=3.10"
+requires-python = ">=3.12"
 dependencies = [
     # The `kinenix hub` command lives in kinenix-core
-    "kinenix>=0.5.0b1",
+    "kinenix>=1.0.0rc1",
     "fastapi>=0.110.0",
     "uvicorn[standard]>=0.28.0",
     "sqlalchemy>=2.0.0",

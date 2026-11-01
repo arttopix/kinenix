@@ -64,6 +64,7 @@ kinenix hub status                                   # http://127.0.0.1:8080
 kinenix hub status --url http://<hub-ip>:8080 --limit 20
 kinenix hub logs                                     # steps of the latest execution
 kinenix hub logs 54f84bd6                            # steps of one execution, by the ID shown in status
+kinenix hub logs 20261028T101500-abcd                # or by the run id that kinenix run prints first
 kinenix hub logs --flow "BOT FX"                     # steps of the latest run of a flow
 kinenix hub report --flow "BOT FX"                   # short report of the latest run of a flow
 kinenix hub report --flow invoice --limit 3          # the last three reports, newest first
@@ -211,6 +212,7 @@ curl.exe -u admin:<strong-password> http://<hub-ip>:8080/api/v1/executions
 - **Signing out:** Browsers cache Basic Auth credentials until the browser is closed; there is no logout button.
 - **Single account:** There is one shared dashboard account. Per-user accounts and roles are not implemented.
 - **Reverse proxy:** As with the worker key, always set the password when a reverse proxy on the same machine forwards requests.
+- **Localhost-only names:** Without a key or password, the Hub answers only requests addressed to `localhost`, `127.0.0.1`, `[::1]`, or this machine's own name. A web page whose name was made to point at this machine (DNS rebinding) is refused, so it cannot read runs from your browser. Open the dashboard as `http://localhost:8080`.
 
 ---
 
@@ -225,7 +227,7 @@ curl.exe -u admin:<strong-password> http://<hub-ip>:8080/api/v1/executions
 
 ## 5. Renamed from Orchestrator
 
-The Hub was called the Orchestrator. Old names keep working for now, with a warning asking you to switch:
+The Hub was called the Orchestrator. Old names keep working in 1.x, with a warning asking you to switch; Kinenix 2.0 removes them:
 
 | Before | Now |
 | :--- | :--- |

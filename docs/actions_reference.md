@@ -984,24 +984,30 @@ Every step in Kinenix can define an optional `error_handler` strategy to make ex
 **Configuration Fields:**
 | Field | Type | Required | Default | Description |
 |---|---|---|---|---|
-| `on_error` | string | No | `"stop"` | What happens after the last attempt: `"fail"` or `"stop"` (the flow fails and `## On Error` runs), `"continue"` (record the failure and go on with the next step), `"next_item"` (inside a `logic.loop`: record the failure and go on with the next item, [flow_markdown_spec.md](flow_markdown_spec.md#31-retries-and-on_error-on-a-step)), or `"retry"` (same as `"fail"`, kept for older flows) |
+| `on_error` | string | No | `"stop"` | What happens after the last attempt: `"fail"` or `"stop"` (the flow fails and `## On Error` runs), `"continue"` (record the failure and go on with the next step), `"next_item"` (inside a `logic.loop`: record the failure and go on with the next item, [flow_markdown_spec.md](flow_markdown_spec.md#31-retries-and-on_error-on-a-step)), or `"retry"` (same as `"fail"`; deprecated, removed in 2.0) |
 | `max_retries` | number or `${...}` | No | `0` | Extra attempts after the first failure, made before `on_error` decides (e.g. `3` = 1 attempt + 3 retries). Business errors (such as from `flow.fail`) are never retried |
 | `retry_interval` | number or `${...}` | No | `1.0` | Delay in seconds between attempts |
-| `fallback_step_id` | string | No | `null` | Target step ID to execute as a recovery handler upon step failure |
+| `fallback_step_id` | string | No | `null` | Deprecated, removed in 2.0: target step ID to execute as a recovery handler upon step failure. Use `on_error: continue` and a next step with a condition on `${error}`, or `## On Error` |
 
-In `flow.md`, write the fields as ordinary step keys. The compiler moves them into `error_handler`; they are not passed to the action. The JSON form `- **error_handler:** {"on_error": "retry", ...}` is also accepted.
+In `flow.md`, write the fields as ordinary step keys. The compiler moves them into `error_handler`; they are not passed to the action. The JSON form `- **error_handler:** {"on_error": "continue", ...}` is also accepted.
 
 Since 0.2.0b4, `max_retries` retries with any `on_error`; before, it worked only with `on_error: retry`. For one place that handles every failure of a flow, use `## On Error` and `## Finally` ([flow_markdown_spec.md](flow_markdown_spec.md#3-failures-retries-on-error-and-finally)).
 
-**Example with Retry and Fallback Recovery in `flow.md` (Markdown):**
+`on_error: retry` and `fallback_step_id` still work in 1.x; `kinenix validate` and every run warn that they will be removed in Kinenix 2.0.
+
+**Example with retries and a recovery step in `flow.md` (Markdown):**
 ```markdown
-### step_fetch_orders. Fetch Orders API (`http.request`)
+### 1. Fetch Orders API (`http.request`)
 - **output_var:** `orders_data`
 - **url:** https://api.example.com/orders
-- **on_error:** retry
 - **max_retries:** 3
 - **retry_interval:** 2.0
-- **fallback_step_id:** step_use_offline_cache
+- **on_error:** continue
+
+### 2. Use Offline Cache (`file.read_text`)
+- **condition:** `${orders_data} is empty`
+- **path:** ./cache/orders.json
+- **output_var:** `orders_data`
 ```
 
 ---
@@ -1301,7 +1307,7 @@ Stops subflow execution early and returns a structured payload to the caller's `
 ---
 
 ### `flow.fail`
-Stops the flow on purpose with a clear message, usually behind a `condition`. Use it for business exceptions such as missing or invalid data, so the failure says what is wrong instead of a later step failing with a technical error. A `business` failure is recorded with error type `Business` and is never retried, even when the step has `on_error: retry`, because the same data fails the same way. A `continue`, `next_item`, or `fallback_step_id` error policy still applies; in a loop, `on_error: next_item` skips the rest of the item and goes on with the next one.
+Stops the flow on purpose with a clear message, usually behind a `condition`. Use it for business exceptions such as missing or invalid data, so the failure says what is wrong instead of a later step failing with a technical error. A `business` failure is recorded with error type `Business` and is never retried, even when the step has `max_retries`, because the same data fails the same way. A `continue`, `next_item`, or `fallback_step_id` error policy still applies; in a loop, `on_error: next_item` skips the rest of the item and goes on with the next one.
 
 **Parameters:**
 | Parameter | Type | Required | Default | Description |

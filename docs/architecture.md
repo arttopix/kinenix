@@ -20,8 +20,8 @@ This document describes how Kinenix is structured: its principles, modules, exec
 
 | Module | Role | Current implementation | Target |
 | :--- | :--- | :--- | :--- |
-| **`kinenix-core`** | Flow interpreter, variable evaluator, action plugins, `kinenix` CLI | Python 3.10+, Pydantic, Playwright, openpyxl, pandas | Same |
-| **`kinenix-worker`** | Runs flows unattended on target machines | CLI with `run`, `watch`, `schedule`, `daemon`; optional per-job sandbox workspace | Persistent WebSocket client receiving jobs from the Hub |
+| **`kinenix-core`** | Flow interpreter, variable evaluator, action plugins, `kinenix` CLI | Python 3.12+, Pydantic, Playwright, openpyxl, pandas | Same |
+| **`kinenix-worker`** | Runs flows unattended on target machines | CLI with `run`, `watch`, `schedule`, `daemon`; optional separate copy of the bundle per run (`--sandbox`, not isolation) | Persistent WebSocket client receiving jobs from the Hub |
 | **`kinenix-studio`** | Flow authoring and debugging | FastAPI backend + React/Vite web UI: flow discovery, editing, validation, run | Tauri desktop shell, persistent browser sessions, element picker, live debugger |
 | **`kinenix-hub`** | Central monitoring and control | FastAPI + SQLAlchemy (SQLite default); receives heartbeats and telemetry over HTTP; web dashboard; AI failure summaries; API key auth | Job dispatch over WebSocket, PostgreSQL + Redis queue, ROI dashboard, LINE/Teams/Email alerts |
 
@@ -77,7 +77,7 @@ sequenceDiagram
         alt Success
             Engine->>Context: Store result in output_var
         else Failure
-            Engine->>Engine: Apply on_error (retry / continue / fallback_step_id)
+            Engine->>Engine: Apply on_error (fail / continue / next_item)
             Engine->>Target: Capture failure screenshot if a browser page is open
         end
     end

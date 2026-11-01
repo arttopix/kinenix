@@ -6,9 +6,10 @@ import sys
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
-from . import __version__
+from . import __version__, exit_codes
+from .models.context import local_now
 from .models.flow import FlowDefinition
-from .engine.interpreter import FlowInterpreter
+from .engine.interpreter import FlowInterpreter, new_run_id
 from .engine.logger import ExecutionLogger
 from .engine.markdown import (
     export_json_to_markdown,
@@ -16,7 +17,7 @@ from .engine.markdown import (
     load_flow,
     markdown_issues,
 )
-from .engine.validation import leftover_json_flows, validate_flow, validate_subflows
+from .engine.validation import deprecated_uses, leftover_json_flows, validate_flow, validate_subflows
 from .scaffold import (
     DEFAULT_EXAMPLE,
     EXAMPLES_DIR,
@@ -42,7 +43,7 @@ def override_config(name: str, flow_dir: Path) -> Dict[str, Any]:
     candidates = [Path(name), flow_dir / name]
     path = next((p for p in candidates if p.is_file()), None)
     if path is None:
-        raise ValueError(f"--config: '{name}' was not found (looked in the current folder and in {flow_dir}).")
+        raise FileNotFoundError(f"--config: '{name}' was not found (looked in the current folder and in {flow_dir}).")
     try:
         data = json.loads(path.read_text(encoding="utf-8-sig"))
     except ValueError as e:
@@ -129,7 +130,7 @@ def discover_flows() -> Dict[str, Tuple[Path, str]]:
                         discovered[rel_str] = (flow_file, name)
                 except ValueError:
                     pass
-            except Exception:
+            except Exception:  # nosec B112: a folder that cannot be read is left out of the list
                 continue
     return discovered
 
@@ -307,9 +308,9 @@ def main():
         sys.exit(0)
 
     elif args.command == "install-browsers":
-        import subprocess
+        import subprocess  # nosec B404: runs only the fixed install command below
         print("Installing Playwright Chromium browser for kinenix...")
-        res = subprocess.run([sys.executable, "-m", "playwright", "install", "chromium"])
+        res = subprocess.run([sys.executable, "-m", "playwright", "install", "chromium"])  # nosec B603: fixed arguments
         if res.returncode == 0:
             print("Chromium browser successfully installed.")
         else:
@@ -336,7 +337,7 @@ def main():
                 written = update_agent_instructions(project)
             except ValueError as e:
                 print(f"Error: {e}", file=sys.stderr)
-                sys.exit(1)
+                sys.exit(exit_codes.NOT_FOUND)
             if not written:
                 print(f"AGENTS.md and CLAUDE.md in {project.resolve()} are already current.")
             for path in written:
@@ -349,7 +350,7 @@ def main():
             print('Error: give the task a name, for example: kinenix init "Get stock data"', file=sys.stderr)
             print(f"       or copy a complete example: kinenix init --example {DEFAULT_EXAMPLE}  (see --list)",
                   file=sys.stderr)
-            sys.exit(1)
+            sys.exit(exit_codes.USAGE)
 
         # Projects go into the flows folder (asked the first time), unless --dir names a folder
         base = None if args.dir else ensure_flows_dir(interactive=sys.stdin.isatty())
@@ -361,9 +362,12 @@ def main():
             else:
                 target = Path(args.dir) if args.dir else base / project_folder_name(args.name)
                 created = create_new_project(args.name, target)
-        except (ValueError, FileExistsError) as e:
+        except ValueError as e:  # an unknown example, or a name that gives no folder name
             print(f"Error: {e}", file=sys.stderr)
-            sys.exit(1)
+            sys.exit(exit_codes.NOT_FOUND if "Unknown example" in str(e) else exit_codes.USAGE)
+        except FileExistsError as e:
+            print(f"Error: {e}", file=sys.stderr)
+            sys.exit(exit_codes.USAGE)
 
         # Inside the flows folder a flow runs by its folder name from anywhere; elsewhere use its path
         run_name = created.name if base and created.parent == base.resolve() else str(created)
@@ -404,7 +408,7 @@ def main():
         names = sorted(n for n in ActionRegistry.list_actions() if not args.filter or n.startswith(args.filter))
         if not names:
             print(f"No action starts with '{args.filter}'.", file=sys.stderr)
-            sys.exit(1)
+            sys.exit(exit_codes.NOT_FOUND)
         width = max(len(n) for n in names) + 2
         print("Actions and the parameters they accept (details: docs/actions_reference.md)")
         print("[...] is what the action can do outside the run: email, files, web, network\n")
@@ -422,17 +426,19 @@ def main():
         resolved_path = resolve_flow_path(args.flow_file)
         if not resolved_path:
             print(f"Error: Could not find flow '{args.flow_file}'.", file=sys.stderr)
-            sys.exit(1)
+            sys.exit(exit_codes.NOT_FOUND)
         source = resolved_path
         try:
             flow_def = load_flow(source)
         except Exception as e:
             print(f"Error loading flow at '{source}': {e}", file=sys.stderr)
-            sys.exit(1)
+            sys.exit(exit_codes.INVALID_FLOW)
         issues = report_validation(flow_def, md_path=source)
+        for notice in deprecated_uses(flow_def):  # still runs in 1.x, so not counted as a problem
+            print(f"Deprecated: {notice}", file=sys.stderr)
         if issues:
             print(f"{len(issues)} problem(s) in {source}", file=sys.stderr)
-            sys.exit(1)
+            sys.exit(exit_codes.INVALID_FLOW)
         print(f"OK: {source} ({flow_def.name})")
         sys.exit(0)
 
@@ -442,7 +448,7 @@ def main():
             src = src / "flow.md"
         if not src.is_file():
             print(f"Error: Markdown flow file not found at: {src}", file=sys.stderr)
-            sys.exit(1)
+            sys.exit(exit_codes.NOT_FOUND)
         try:
             flow_def = load_flow(src)
             text = flow_to_json_text(flow_def)
@@ -454,18 +460,20 @@ def main():
             else:
                 sys.stdout.write(text)
             issues = report_validation(flow_def, md_path=src)
-            sys.exit(1 if issues and args.strict else 0)
+            sys.exit(exit_codes.INVALID_FLOW if issues and args.strict else exit_codes.OK)
         except Exception as e:
             print(f"Compilation error: {e}", file=sys.stderr)
-            sys.exit(1)
+            sys.exit(exit_codes.INVALID_FLOW)
 
     elif args.command == "export-md":
+        print("Deprecated: kinenix export-md will be removed in Kinenix 2.0; convert any flow.json left from "
+              "0.2.0b3 or older with Kinenix 1.x first.", file=sys.stderr)
         src = Path(args.json_file).resolve()
         if src.is_dir() and (src / "flow.json").is_file():
             src = src / "flow.json"
         if not src.is_file():
             print(f"Error: JSON flow file not found at: {src}", file=sys.stderr)
-            sys.exit(1)
+            sys.exit(exit_codes.NOT_FOUND)
         out = Path(args.output).resolve() if args.output else None
         try:
             target = export_json_to_markdown(src, output_md_path=out)
@@ -504,6 +512,8 @@ def main():
         sys.exit(0)
 
     elif args.command == "run":
+        if any(a == "--orchestrator" or a.startswith("--orchestrator=") for a in sys.argv[1:]):
+            print("Deprecated: --orchestrator is now --hub; the old name will be removed in Kinenix 2.0.", file=sys.stderr)
         resolved_path = resolve_flow_path(args.flow_file)
         if not resolved_path:
             print(f"Error: Could not find flow '{args.flow_file}'.", file=sys.stderr)
@@ -513,17 +523,13 @@ def main():
                 for alias, (_, name) in sorted(flows.items()):
                     print(f"  - {alias:<16} ({name})", file=sys.stderr)
             print("\nTip: You can also give the path of a bundle folder or flow.md: kinenix run <path>", file=sys.stderr)
-            sys.exit(1)
+            sys.exit(exit_codes.NOT_FOUND)
 
         try:
             flow_def = load_flow(resolved_path)
         except Exception as e:
             print(f"Error loading flow at '{resolved_path}': {str(e)}", file=sys.stderr)
-            sys.exit(1)
-        report_validation(flow_def, md_path=resolved_path)
-        if not flow_def.steps:
-            print(f"Error: {resolved_path} has no steps, so there is nothing to run.", file=sys.stderr)
-            sys.exit(1)
+            sys.exit(exit_codes.INVALID_FLOW)
 
         extra_vars = {}
         if args.vars:
@@ -531,15 +537,28 @@ def main():
                 extra_vars = json.loads(args.vars)
             except Exception as e:
                 print(f"Error parsing --vars JSON: {str(e)}", file=sys.stderr)
-                sys.exit(1)
+                sys.exit(exit_codes.USAGE)
 
         if args.config_file:
             try:
                 extra_vars["config"] = {**override_config(args.config_file, resolved_path.parent),
                                         **(extra_vars.get("config") or {})}
+            except FileNotFoundError as e:
+                print(f"Error: {e}", file=sys.stderr)
+                sys.exit(exit_codes.NOT_FOUND)
             except ValueError as e:
                 print(f"Error: {e}", file=sys.stderr)
-                sys.exit(1)
+                sys.exit(exit_codes.USAGE)
+
+        # The first line of every run names it, so a person, a script, or an agent can ask about it later
+        run_id = new_run_id(local_now())
+        print(f"Run {run_id}", flush=True)
+        extra_vars["__run_id__"] = run_id
+
+        report_validation(flow_def, md_path=resolved_path)
+        if not flow_def.steps:
+            print(f"Error: {resolved_path} has no steps, so there is nothing to run.", file=sys.stderr)
+            sys.exit(exit_codes.INVALID_FLOW)
 
         extra_vars["__flow_dir__"] = str(resolved_path.parent)
         if args.hub:
@@ -549,11 +568,12 @@ def main():
 
         logger = ExecutionLogger(log_dir=args.log_dir, flow_path=resolved_path)
         interpreter = FlowInterpreter(logger=logger)
-        context = interpreter.run_flow(flow_def, initial_vars=extra_vars)
-
-        if context.has_error:
-            sys.exit(1)
-        sys.exit(0)
+        try:
+            context = interpreter.run_flow(flow_def, initial_vars=extra_vars)
+        except KeyboardInterrupt:
+            print("\nStopped (Ctrl+C).", file=sys.stderr)
+            sys.exit(exit_codes.INTERRUPTED)
+        sys.exit(exit_codes.for_run(context))
 
     elif args.command == "connect":
         from . import connect
@@ -569,7 +589,7 @@ def main():
 
     elif args.command in ("hub", "orchestrator"):
         if args.command == "orchestrator":
-            print("Note: 'kinenix orchestrator' is now 'kinenix hub'; the old name will be removed in a later release.", file=sys.stderr)
+            print("Deprecated: 'kinenix orchestrator' is now 'kinenix hub'; the old name will be removed in Kinenix 2.0.", file=sys.stderr)
         try:
             from rich.console import Console
             from kinenix_hub import config as hub_config
@@ -587,12 +607,12 @@ def main():
         if args.action == "setup" or first_run:
             if not hub_console.can_prompt():
                 console.print("[bold red]Error:[/] setup needs an interactive terminal.")
-                sys.exit(1)
+                sys.exit(exit_codes.USAGE)
             try:
                 hub_console.run_setup(console, hub_config.SETTINGS_FILE)
             except (EOFError, KeyboardInterrupt):
                 console.print("\n[yellow]Setup cancelled. Nothing was saved.[/]")
-                sys.exit(1)
+                sys.exit(exit_codes.INTERRUPTED)
             importlib.reload(hub_config)
             if args.action == "setup":
                 console.print("Start the Hub with: [bold]kinenix hub[/]")
@@ -601,7 +621,7 @@ def main():
         if args.action == "show-key":
             if not hub_config.API_KEY:
                 console.print("No worker API key is set. Create one with: [bold]kinenix hub setup[/]")
-                sys.exit(1)
+                sys.exit(exit_codes.NOT_FOUND)
             console.print(hub_config.API_KEY, soft_wrap=True)
             # The key alone goes to standard output, so `$(kinenix hub show-key)` keeps working
             urls = hub_console.browser_urls(args.host or hub_config.HOST, args.port or hub_config.PORT)
@@ -630,7 +650,7 @@ def main():
                     break
                 except LookupError as e:
                     console.print(f"[bold red]Error:[/] {e}")
-                    sys.exit(1)
+                    sys.exit(exit_codes.NOT_FOUND)
                 except requests.HTTPError as e:
                     code = e.response.status_code
                     # Ask once for the password when the server requires one and none was given
@@ -641,10 +661,11 @@ def main():
                             continue
                     hint = " Check KINENIX_HUB_DASHBOARD_USER and KINENIX_HUB_DASHBOARD_PASSWORD against the server's values." if code in (401, 403) else ""
                     console.print(f"[bold red]Error:[/] {url} returned HTTP {code}.{hint}")
-                    sys.exit(1)
+                    sys.exit(exit_codes.UNREACHABLE if code in (401, 403) else
+                             exit_codes.NOT_FOUND if code == 404 else exit_codes.TECHNICAL)
                 except requests.RequestException as e:
                     console.print(f"[bold red]Error:[/] cannot reach {url}. Is the Hub running? ({e.__class__.__name__})")
-                    sys.exit(1)
+                    sys.exit(exit_codes.UNREACHABLE)
             if args.action == "status":
                 hub_console.print_status(console, url, data)
             else:

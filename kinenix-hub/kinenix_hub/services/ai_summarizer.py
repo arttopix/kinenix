@@ -20,7 +20,7 @@ CATEGORIES = {
     "Page Load / Network Timeout": {
         "th_label": "เครือข่ายขัดข้อง หรือหน้าเว็บโหลดช้าเกินกำหนด",
         "root_cause": "เว็บไซต์ตอบสนองช้าเกินกว่าเวลา Timeout หรืออินเทอร์เน็ตขัดข้องระหว่างโหลดข้อมูล",
-        "suggestion": "เพิ่ม timeout ใน web.wait_for หรือตั้งค่า on_error: retry พร้อม max_retries: 2"
+        "suggestion": "เพิ่ม timeout ใน web.wait_for หรือตั้งค่า max_retries: 2 ที่ step นั้น"
     },
     "File / Resource Missing": {
         "th_label": "ไม่พบไฟล์ที่จำเป็น (เช่น Excel หรือโฟลเดอร์)",

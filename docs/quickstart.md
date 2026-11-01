@@ -1,6 +1,6 @@
 # Quickstart
 
-From installation to your own task described in requirements, built with an AI assistant, and running unattended, in about ten minutes of reading. You need Python 3.10 or newer.
+From installation to your own task described in requirements, built with an AI assistant, and running unattended, in about ten minutes of reading. You need Python 3.12 or newer.
 
 ---
 

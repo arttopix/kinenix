@@ -33,7 +33,7 @@ def lan_ip() -> Optional[str]:
 
 def browser_urls(host: str, port: int) -> List[str]:
     """URLs a person can open for a given bind address; 0.0.0.0 itself is not a valid browser address."""
-    if host in ("0.0.0.0", "::"):
+    if host in ("0.0.0.0", "::"):  # nosec B104: a comparison, nothing is bound here
         urls = [f"http://127.0.0.1:{port}"]
         ip = lan_ip()
         if ip:
@@ -54,7 +54,7 @@ def hide_uvicorn_bind_url() -> None:
 
 
 def print_banner(console: Console, host: str, port: int, llm_url: str, api_key_set: bool, dashboard_password_set: bool) -> None:
-    remote = host in ("0.0.0.0", "::")
+    remote = host in ("0.0.0.0", "::")  # nosec B104: a comparison, nothing is bound here
     grid = Table.grid(padding=(0, 2))
     grid.add_column(style="bold cyan", no_wrap=True)
     grid.add_column(overflow="fold")
@@ -148,8 +148,9 @@ def run_setup(console: Console, path: Path) -> Dict[str, str]:
     ))
 
     remote = ask_yes_no(console, "Allow workers on other machines (e.g. a Raspberry Pi) to connect?",
-                        default=values.get("KINENIX_HUB_HOST", "0.0.0.0") != "127.0.0.1")
-    values["KINENIX_HUB_HOST"] = "0.0.0.0" if remote else "127.0.0.1"
+                        default=values.get("KINENIX_HUB_HOST", "0.0.0.0") != "127.0.0.1")  # nosec B104
+    # Every address only when the person answers yes; the Hub then needs the worker key (docs/hub.md)
+    values["KINENIX_HUB_HOST"] = "0.0.0.0" if remote else "127.0.0.1"  # nosec B104
     values["KINENIX_HUB_PORT"] = _ask_port(console, values.get("KINENIX_HUB_PORT", "8080"))
 
     new_key = None
@@ -318,9 +319,11 @@ def fetch_execution_log(base_url: str, auth: Optional[Tuple[str, str]], id_prefi
         raise LookupError("No executions recorded yet.")
 
     if id_prefix:
-        matches = [e for e in executions if e["id"].startswith(id_prefix)]
+        # The Hub's execution id, or the run id that `kinenix run` prints first (also ${run.id} and log names)
+        matches = [e for e in executions if e["id"].startswith(id_prefix)
+                   or str((e.get("details") or {}).get("run_id") or "").startswith(id_prefix)]
         if not matches:
-            raise LookupError(f"No recent execution ID starts with '{id_prefix}'.")
+            raise LookupError(f"No recent execution or run ID starts with '{id_prefix}'.")
         if len(matches) > 1:
             raise LookupError(f"'{id_prefix}' matches {len(matches)} executions; type more characters of the ID.")
         execution_id = matches[0]["id"]

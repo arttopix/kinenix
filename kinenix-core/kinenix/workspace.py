@@ -14,7 +14,7 @@ points to another file (tests use it to stay away from the real one).
 """
 import os
 import shutil
-import subprocess
+import subprocess  # nosec B404: runs only `git init` on the flows folder
 from pathlib import Path
 from typing import Callable, Dict, Mapping, Optional
 
@@ -116,7 +116,7 @@ def prepare_flows_dir(path: Path, use_git: bool) -> Path:
     if not (path / "README.md").exists():
         (path / "README.md").write_text(FLOWS_README, encoding="utf-8")
     if use_git and not (path / ".git").exists() and shutil.which("git"):
-        subprocess.run(["git", "init", "-q", str(path)], check=False)
+        subprocess.run(["git", "init", "-q", str(path)], check=False)  # nosec B603 B607: git found by shutil.which, no shell
     return path
 
 

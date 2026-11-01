@@ -10,7 +10,7 @@ kinenix install-browsers          # Playwright Chromium, needed for web actions
 kinenix-worker info
 ```
 
-Requires Python 3.10 or newer. To report to a Kinenix Hub, run `kinenix connect http://<hub-ip>:8080` (section 3D). The Raspberry Pi quickstart below installs from the repository instead and also sets up a systemd service.
+Requires Python 3.12 or newer. To report to a Kinenix Hub, run `kinenix connect http://<hub-ip>:8080` (section 3D). The Raspberry Pi quickstart below installs from the repository instead and also sets up a systemd service.
 
 ---
 
@@ -20,7 +20,7 @@ Requires Python 3.10 or newer. To report to a Kinenix Hub, run `kinenix connect 
 
 ### Key Capabilities
 - **Lightweight Execution:** Minimal overhead with direct integration into `kinenix-core`.
-- **Sandbox Workspace Isolation:** Executes project bundles inside disposable, per-job sandbox environments.
+- **Separate copy per run (`--sandbox`):** Runs a bundle from its own copy in `~/.kinenix/workspaces/<job_id>`, so a run does not change the original folder. It is not isolation: the flow keeps the rights of the user who runs the worker.
 - **Hardware Telemetry:** Gathers CPU, memory, architecture, and platform metrics at runtime.
 - **Structured JSON Auditing:** Stores hierarchical execution traces and error telemetry locally.
 
@@ -47,7 +47,7 @@ cd kinenix
 
 The script automatically:
 1. Installs required Linux shared libraries for Chromium on aarch64.
-2. Creates a Python 3.10+ virtual environment (`.venv`).
+2. Creates a Python 3.12+ virtual environment (`.venv`).
 3. Installs `kinenix-core` and `kinenix-worker` in editable mode.
 4. Installs the ARM64 Playwright Chromium browser.
 5. Verifies the installation with `kinenix-worker info`.
@@ -75,7 +75,7 @@ Kinenix Worker System Information:
   os_release: 6.6.x+rpt-rpi-v8
   machine: aarch64
   processor: aarch64
-  python_version: 3.11.x
+  python_version: 3.13.x
   cpu_count: 4
   memory_total_mb: 3884.2
   memory_available_mb: 3200.1
@@ -90,7 +90,7 @@ Kinenix Worker System Information:
 kinenix-worker run flows/examples/rpachallenge
 ```
 
-To run inside an isolated sandbox directory:
+To run from a separate copy of the bundle (the original folder stays unchanged):
 ```bash
 kinenix-worker run flows/examples/rpachallenge --sandbox
 ```
@@ -210,6 +210,6 @@ options:
 
 ### `kinenix-worker run` Options
 - `flow_path`: Flow name, project bundle directory, or path to a `flow.md`.
-- `--sandbox`: Execute inside an isolated temporary sandbox (`~/.kinenix/workspaces/<job_id>`).
+- `--sandbox`: Run from a separate copy of the bundle in `~/.kinenix/workspaces/<job_id>`. The flow's outputs stay in that copy; its `.env` files are deleted when the run ends. Not isolation: the flow has the same rights as without it.
 - `--vars`: JSON string of variables to override.
 - `--log-dir`: Also write a local JSON execution log to this directory. Telemetry to the Hub does not depend on it.

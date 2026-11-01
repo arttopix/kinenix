@@ -51,7 +51,7 @@ def test_a_json_flow_is_not_run_and_says_how_to_convert(tmp_path):
     with pytest.raises(ValueError, match="kinenix export-md"):
         load_flow(bundle)
     result = cli(tmp_path, "run", str(bundle))
-    assert result.returncode == 1 and "kinenix export-md" in result.stderr
+    assert result.returncode == 4 and "kinenix export-md" in result.stderr
 
 
 def test_export_md_converts_an_old_flow_once_and_keeps_value_types(tmp_path):
@@ -101,9 +101,9 @@ def test_a_flow_without_steps_is_reported_and_not_run(tmp_path):
     bundle = tmp_path / "empty"
     bundle.mkdir()
     (bundle / "flow.md").write_text(markdown, encoding="utf-8")
-    assert cli(tmp_path, "validate", str(bundle)).returncode == 1
+    assert cli(tmp_path, "validate", str(bundle)).returncode == 4
     result = cli(tmp_path, "run", str(bundle))
-    assert result.returncode == 1 and "has no steps" in result.stderr
+    assert result.returncode == 4 and "has no steps" in result.stderr
 
 
 def test_no_flow_json_in_the_repository():

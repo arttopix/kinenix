@@ -19,6 +19,8 @@ PBKDF2_ITERATIONS = 300_000
 LEGACY_PREFIX = "ORCHESTRATOR_"
 CURRENT_PREFIX = "KINENIX_HUB_"
 LEGACY_SETTINGS_FILE = Path.home() / ".kinenix" / "orchestrator.env"
+# Pre-rename names that were read (old name -> new name), reported once by config.log_legacy_names()
+LEGACY_USED: Dict[str, str] = {}
 
 
 def legacy_name(name: str) -> str:
@@ -28,7 +30,10 @@ def legacy_name(name: str) -> str:
 
 def settings_path() -> Path:
     """Where `kinenix hub setup` writes; also the first file read."""
-    override = os.environ.get("KINENIX_HUB_SETTINGS_FILE") or os.environ.get("ORCHESTRATOR_SETTINGS_FILE")
+    override = os.environ.get("KINENIX_HUB_SETTINGS_FILE")
+    if not override and os.environ.get("ORCHESTRATOR_SETTINGS_FILE"):
+        override = os.environ["ORCHESTRATOR_SETTINGS_FILE"]
+        LEGACY_USED["ORCHESTRATOR_SETTINGS_FILE"] = "KINENIX_HUB_SETTINGS_FILE"
     return Path(override).expanduser() if override else DEFAULT_SETTINGS_FILE
 
 
@@ -57,7 +62,8 @@ def read_saved_settings(path: Path) -> Dict[str, str]:
     ~/.kinenix/orchestrator.env is read instead; an explicitly chosen file never falls back."""
     if path.is_file():
         return read_settings(path)
-    if path == DEFAULT_SETTINGS_FILE:
+    if path == DEFAULT_SETTINGS_FILE and LEGACY_SETTINGS_FILE.is_file():
+        LEGACY_USED[str(LEGACY_SETTINGS_FILE)] = str(DEFAULT_SETTINGS_FILE)
         return read_settings(LEGACY_SETTINGS_FILE)
     return {}
 

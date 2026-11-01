@@ -1,5 +1,5 @@
 """
 Kinenix Hub & AI Dashboard.
 """
-__version__ = "0.5.0b1"
+__version__ = "1.0.0rc1"
 

@@ -17,7 +17,7 @@ This document defines code conventions, typing standards, and module implementat
 
 ## 2. Python Standards (`kinenix-core`)
 
-- **Runtime Target:** Python 3.10 or higher.
+- **Runtime Target:** Python 3.12 or higher.
 - **Type Annotations:** All function signatures and class definitions must include full type hints.
 - **Data Models:** Use Pydantic models for data validation, serialization, and flow schema representations.
 - **Action Implementation:**

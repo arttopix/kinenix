@@ -2,6 +2,54 @@
 
 `kinenix`, `kinenix-hub`, and `kinenix-worker` are released together with one version. How to release: [docs/releasing.md](docs/releasing.md).
 
+## 1.0.0rc1 (2026-11-02)
+
+The stable core: what stays the same for all of 1.x is written down in [docs/compatibility.md](docs/compatibility.md), commands end with exit codes that say what happened, and the code went through a threat model, a security review, and security checks in CI. Flows written for 0.5.0b1 run unchanged.
+
+### Upgrading from 0.5.0b1
+
+- **Python 3.12 or newer is required.** Python 3.10 reached its end of life in October 2026, and 3.12 is supported until October 2028, so 1.x does not start on a version that is about to end. On Python 3.10 or 3.11, `pip` keeps installing 0.5.0b1; install Python 3.12 or newer and create a new virtual environment before upgrading (Ubuntu 24.04 and Raspberry Pi OS based on Debian 13 already have it).
+- **Exit codes:** a script or scheduler that treated every failure as 1 now gets a code that says why: 1 technical, 2 wrong use of the command, 3 a business rule (`flow.fail`), 4 an invalid flow, 5 a newer Kinenix needed, 6 the Hub cannot be reached, 7 not found, 130 Ctrl+C. Success is still 0, also when every failure was handled ([docs/cli_guide.md](docs/cli_guide.md#28-exit-codes)).
+- **First line of `kinenix run`:** it is now `Run <run_id>`. A script that reads the output should skip it or use the id.
+- **A Hub without a key or password** answers only requests addressed to `localhost`, `127.0.0.1`, or the machine's own name. Open the dashboard as `http://localhost:8080`.
+- **`flow.call` with `./` or `../`:** the target must exist in the bundle. Before, a missing file was looked for in the current folder and among flows by name.
+- **`kinenix-worker --sandbox`** deletes the `.env` files of its copy when the run ends; the flow's outputs in the copy stay.
+- **Logs hide more:** values under names with `pin` or `otp` as a word (`BANK_PIN`), or with `passcode`.
+
+### Added
+
+- Exit codes with a meaning for `kinenix`, `kinenix hub`, and `kinenix-worker`, and `Run <run_id>` as the first line of `kinenix run`; `kinenix hub logs` accepts that run id, and the worker's result carries `exit_code` and `run_id` (#128).
+- [docs/compatibility.md](docs/compatibility.md): what stays stable for all of 1.x, what may change, what is experimental, how deprecation works, and how to upgrade (#135).
+- [docs/design/threat-model.md](docs/design/threat-model.md): what Kinenix protects, how the parts trust each other, twelve threats with their milestone, and the review findings (#137, #138).
+- Security checks on every pull request and weekly: pip-audit, bandit, zizmor, and CodeQL; Dependabot keeps the pinned GitHub Actions current (#133).
+- Failure-injection tests: a Hub that is down, slow, or answers with an error; a missing input file; a browser that dies in the middle of a loop. Each run finishes on its own, keeps its log, and leaves no browser process (#136).
+
+### Security
+
+- `SECURITY.md`: supported versions, and reporting a vulnerability privately through GitHub instead of a public issue.
+- A Hub without a key or password could be read by a web page through DNS rebinding; it now checks the `Host` header on that path (#137).
+- `--sandbox` copies kept the bundle's `.env` with its passwords forever (#137).
+- `PIN`, `OTP`, and `PASSCODE` values reached logs and the Hub (#137).
+- A missing `./subflows/...` target could run another flow that shared its path or name (#138).
+- The release workflow passes the tag name through the environment instead of the script text, pins every action to a commit, and keeps no token on the runner (#133).
+- Studio's frontend (not published) moves to vite 6.4 for known vulnerabilities in its development server (#134).
+
+### Fixed
+
+- A Hub that accepts the connection but does not answer was reported as a possible firewall; it now says the Hub may be busy or stuck (#136).
+- `kinenix hub query` builds SQL only from table and view names that the database returns (#133).
+
+### Deprecated
+
+These still work in 1.x and warn when used; Kinenix 2.0 removes them.
+
+- `on_error: retry`: it already works like `fail`. Delete the line; `max_retries` does the retrying.
+- `fallback_step_id`: use `on_error: continue` and a next step with a `condition`, or `## On Error`.
+- `kinenix export-md`: convert any `flow.json` from 0.2.0b3 or older with Kinenix 1.x.
+- The Orchestrator names: `kinenix orchestrator`, `kinenix run --orchestrator`, the `ORCHESTRATOR_*` and `KINENIX_ORCHESTRATOR_*` variables, and `~/.kinenix/orchestrator.env` ([docs/hub.md](docs/hub.md), section 5).
+
+`kinenix validate` prints the deprecated parts of a flow without failing, and every run logs them.
+
 ## 0.5.0b1 (2026-10-28)
 
 Learn and test: a tutorial from requirements to a running flow, a business example, testing a flow against saved pages, and documentation for AI assistants.

@@ -36,6 +36,11 @@ cd kinenix-core; ../.venv/Scripts/python.exe -m pytest -q; cd ..
 .venv/Scripts/python.exe -m pytest -q kinenix-studio/tests
 .venv/Scripts/python.exe -m pytest -q kinenix-hub/tests
 
+# Security checks (CI job "Security checks"; .agents/rules/security.md)
+.venv/Scripts/python.exe -m pip install pip-audit bandit zizmor
+.venv/Scripts/python.exe -m bandit -q -r kinenix-core/kinenix kinenix-hub/kinenix_hub kinenix-worker/kinenix_worker -x "*/build/*"
+.venv/Scripts/zizmor.exe --offline --min-severity medium .github/workflows
+
 # Studio frontend
 cd kinenix-studio/frontend; npm ci; npm run build
 
@@ -48,14 +53,14 @@ kinenix validate flows/examples/rpachallenge   # unknown actions and ignored par
 kinenix connect http://<hub-ip>:8080   # send this machine's runs to a Hub (asks for and checks the key)
 kinenix hub            # first run asks setup questions and saves them
 kinenix hub status     # workers and recent executions of a running server
-kinenix hub logs [ID]  # steps of one execution (latest when ID is omitted; --flow NAME for a flow's latest)
+kinenix hub logs [ID]  # steps of one execution or run id (latest when ID is omitted; --flow NAME for a flow's latest)
 kinenix hub report --flow NAME   # short report of a flow's latest run (--limit N for more)
 kinenix hub query v_failures --since yesterday   # read-only questions to hub.db (--list, --describe, SQL)
 ```
 
 CLI output in `kinenix-worker` and `kinenix hub` is rendered with `rich` (`kinenix_worker/display.py`, `kinenix_hub/console.py`); `kinenix-core` itself does not depend on it.
 
-Run the test suites for every module you touch before reporting work as done. GitHub Actions (`.github/workflows/ci.yml`) runs the same commands on every push and pull request to `main` and `dev`; keep the workflow in sync when these commands change.
+Run the test suites for every module you touch before reporting work as done. GitHub Actions (`.github/workflows/ci.yml`) runs the same commands on every push and pull request to `main` and `dev`, and weekly; `codeql.yml` adds code scanning; keep the workflow in sync when these commands change.
 
 The website www.kinenix.com is a separate repository (`arttopix/kinenix-web`, MkDocs on Cloudflare Pages) that copies `docs/` from `main` at every build; `.github/workflows/website.yml` asks it to rebuild when `docs/` changes on `main` (`docs/releasing.md`, section 5). Write documentation here, in `docs/`; do not edit the copies in kinenix-web.
 

@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "kinenix"
 dynamic = ["version"]
-description = "Core execution engine and standard action libraries for Kinenix RPA platform"
+description = "Open-source Python framework for automation flows written in Markdown: the flow runner, built-in actions, and the kinenix CLI"
 readme = "README.md"
 license = "Apache-2.0"
 license-files = ["LICENSE", "NOTICE"]
@@ -20,7 +20,7 @@ classifiers = [
     "Topic :: Software Development :: Libraries",
     "Topic :: Office/Business",
 ]
-requires-python = ">=3.10"
+requires-python = ">=3.12"
 dependencies = [
     "pydantic>=2.0.0",
     "playwright>=1.40.0",
@@ -31,8 +31,8 @@ dependencies = [
 
 [project.optional-dependencies]
 # One-command installs; all Kinenix packages are released together with the same version
-hub = ["kinenix-hub>=0.5.0b1"]
-worker = ["kinenix-worker>=0.5.0b1"]
+hub = ["kinenix-hub>=1.0.0rc1"]
+worker = ["kinenix-worker>=1.0.0rc1"]
 dev = [
     "pytest>=7.0.0"
 ]

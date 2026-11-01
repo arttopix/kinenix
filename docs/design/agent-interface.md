@@ -46,7 +46,7 @@ Layer 1 comes first; layers 2 to 4 only call it.
 | 7 | Not found: no such flow, run id, or view | No |
 | 130 | Interrupted (Ctrl+C) | |
 
-A run that stops in `## Steps` takes the code of that failure; a failure in `## Finally` after successful steps is 1. Today every failure is 1.
+A run that stops in `## Steps` takes the code of that failure; a failure in `## Finally` after successful steps is 1. Built in 1.0.0 (`kinenix/exit_codes.py`); the user reference is [cli_guide.md, Exit Codes](../cli_guide.md#28-exit-codes).
 
 ## 5. The envelope
 
@@ -91,16 +91,16 @@ The same objects appear in every command and in the MCP server; their fields fol
 | `kinenix capabilities` | | version, actions and their parameters, expression functions, features | read-only | `kinenix actions` (text) |
 | `kinenix list` | | Flow list | read-only | text |
 | `kinenix describe FLOW` | flow | Flow, with inputs and side effects | read-only | none |
-| `kinenix validate FLOW` | flow | Issue list | read-only | text, exit 1 |
-| `kinenix run FLOW` | flow, `--var NAME=VALUE`, `--dry-run`, `--detach`, `--yes` | Run (with `--detach`: `run_id` at once) | **side effect** | runs; `run_id` only in the log |
+| `kinenix validate FLOW` | flow | Issue list | read-only | text, exit 4 on problems |
+| `kinenix run FLOW` | flow, `--var NAME=VALUE`, `--dry-run`, `--detach`, `--yes` | Run (with `--detach`: `run_id` at once) | **side effect** | runs; prints `Run <run_id>` first; exit codes of section 4 |
 | `kinenix runs status RUN_ID` | run id | Run so far (from the live log) | read-only | none |
 | `kinenix hub report` | flow or run id, limit | Run list | read-only | text |
-| `kinenix hub logs` | flow or run id | Run with Step list | read-only | text |
+| `kinenix hub logs` | flow or run id | Run with Step list | read-only | text; accepts the run id |
 | `kinenix hub query` | view, filters, or SQL | rows | read-only | `--format json` |
 | `kinenix hub status` | | workers, recent runs | read-only | text |
 | `kinenix connect` | | Hub in use and whether it answers | read-only (without a URL) | text |
 
-**Side effects of a flow** are derived from its actions, so `describe` and a confirmation can say what a run will do: `email` (`email.send`), `files` (writes, moves, deletes), `web` (clicks and typing on a site), `network` (HTTP calls), `none`. Each action declares its kind in code (an attribute next to `accepted_parameters`).
+**Side effects of a flow** are derived from its actions, so `describe` and a confirmation can say what a run will do: `email` (`email.send`), `files` (writes, moves, deletes), `web` (clicks and typing on a site), `network` (HTTP calls), `none`. Each action declares its kind in code (an attribute next to `accepted_parameters`). For `files`, `describe` and `--dry-run` also name the paths a run writes, moves, or deletes outside its bundle, so a flow from someone else cannot touch other folders unnoticed ([threat-model.md](threat-model.md), T1).
 
 **`--dry-run`** compiles and validates the flow, resolves its config and inputs, and lists the steps and side effects it would run, without running any action.
 
@@ -132,7 +132,7 @@ Stable names; the message may change, the code may not. Each says whether retryi
 
 Only what cannot be added later without breaking anyone:
 
-1. **Exit codes** of section 4 for `kinenix run`, `validate`, `connect`, and `kinenix hub ...`, written into the stability promise (`docs/compatibility.md`).
+1. **Exit codes** of section 4 for `kinenix run`, `validate`, `connect`, and `kinenix hub ...`, written into the stability promise ([compatibility.md](../compatibility.md)).
 2. **`run_id` early:** `kinenix run` prints `Run <run_id>` as its first line, and every command that takes a run id accepts the `run_id` (the Hub's `execution_id` keeps working).
 3. **What is stable:** the stability promise says that exit codes, `--json` output (when it exists), the JSON Schemas, and the Hub views are stable, and that text meant for people is not.
 4. **One implementation:** new commands in 0.4.0b1 to 1.0.0 put their logic in a function that returns data; `cli.py` only parses and prints (the rule goes into `.agents/rules/architecture.md`).

@@ -6,7 +6,7 @@ from kinenix_hub import config as hub_config
 from kinenix_hub.app import app
 
 # Local-dev client: no API key configured, requests arrive from loopback
-client = TestClient(app, client=("127.0.0.1", 50000))
+client = TestClient(app, base_url="http://127.0.0.1:8080", client=("127.0.0.1", 50000))
 remote_client = TestClient(app, client=("192.168.1.77", 50000))
 
 HEARTBEAT_PAYLOAD = {"worker_id": "rpi-auth-01", "name": "Auth Test Node"}
@@ -247,3 +247,26 @@ def test_worker_key_check_endpoint(monkeypatch):
     assert remote_client.get("/api/v1/auth/worker", headers={"X-API-Key": "worker-key-1"}).status_code == 200
     assert remote_client.get("/api/v1/auth/worker", headers={"X-API-Key": "wrong"}).status_code == 401
     assert client.get("/api/v1/auth/worker").status_code == 401
+
+
+def test_a_localhost_only_hub_refuses_other_host_names(monkeypatch):
+    """DNS rebinding (docs/design/threat-model.md, T4): a web page whose name now resolves to 127.0.0.1
+    connects from localhost but sends its own name as Host; without a key or password it gets nothing."""
+    monkeypatch.setattr(hub_config, "API_KEY", "")
+    monkeypatch.setattr(hub_config, "DASHBOARD_PASSWORD", "")
+    monkeypatch.setattr(hub_config, "DASHBOARD_PASSWORD_HASH", "")
+    rebound = TestClient(app, base_url="http://evil.example:8080", client=("127.0.0.1", 50000))
+    assert rebound.get("/api/v1/executions").status_code == 403
+    assert rebound.post("/api/v1/heartbeat", json={"worker_id": "x"}).status_code == 403
+    assert "localhost" in rebound.get("/api/v1/executions").json()["detail"]
+    for url in ("http://localhost:8080", "http://127.0.0.1:8080", "http://localhost"):
+        assert TestClient(app, base_url=url, client=("127.0.0.1", 50000)).get("/api/v1/executions").status_code == 200, url
+
+
+@pytest.mark.parametrize("header, host", [
+    ("localhost:8080", "localhost"), ("127.0.0.1", "127.0.0.1"), ("[::1]:8080", "::1"), ("[::1]", "::1"),
+    ("LocalHost.:8080", "localhost"), ("evil.example:8080", "evil.example"), ("", ""),
+])
+def test_host_header_without_its_port(header, host):
+    from kinenix_hub.security import _request_host
+    assert _request_host(MagicMock(headers={"host": header})) == host

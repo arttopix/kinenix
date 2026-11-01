@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "kinenix-studio"
 version = "0.1.0a1"
 description = "Developer Studio, Step Inspector, and Live Debugger for Kinenix"
-requires-python = ">=3.10"
+requires-python = ">=3.12"
 dependencies = [
     "kinenix>=0.1.0b1",
     "fastapi>=0.110.0",

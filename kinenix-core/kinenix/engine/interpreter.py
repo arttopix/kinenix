@@ -91,6 +91,13 @@ def resolve_subflow_path(flow_target: str, context: Any) -> Path:
             if found:
                 return found
 
+    # A path written relative to the bundle (./subflows/x.md) means that file only. Looking further, in the
+    # current folder or among the flows by name, could run another flow that happens to share the name
+    # (docs/design/threat-model.md, T1)
+    has_bundle = context.get_variable("__flow_dir__") or context.get_variable("__flow_file_dir__")
+    if has_bundle and target_str.startswith(("./", "../", ".\\", "..\\")):
+        raise FileNotFoundError(f"Subflow file not found: '{flow_target}' (relative to the bundle folder)")
+
     # 3. Direct path or relative to current working directory
     found = _flow_file(Path(target_str).resolve())
     if found:
@@ -102,7 +109,7 @@ def resolve_subflow_path(flow_target: str, context: Any) -> Path:
         resolved = resolve_flow_path(target_str)
         if resolved and resolved.is_file():
             return resolved.resolve()
-    except Exception:
+    except Exception:  # nosec B110: not found by name either; the caller reports the subflow as missing
         pass
 
     raise FileNotFoundError(f"Subflow file not found: '{flow_target}'")
@@ -353,7 +360,9 @@ class FlowInterpreter:
         run_info = context.get_variable("run") if self.call_stack else None
         if not isinstance(run_info, dict) or not run_info.get("id"):
             started = local_now()
-            run_info = {"id": new_run_id(started), "flow": flow_def.name,
+            # The CLI makes the id before the run, so `Run <id>` is the first line it prints
+            run_id = (initial_vars or {}).get("__run_id__") if not self.call_stack else None
+            run_info = {"id": run_id or new_run_id(started), "flow": flow_def.name,
                         "started": started.isoformat(timespec="seconds")}
         run_info = {**run_info, "status": "running"}
         if not self.call_stack:
@@ -378,6 +387,9 @@ class FlowInterpreter:
                     raise ValueError(
                         f"Step '{s_id}' specifies fallback_step_id '{fb_target}' which does not exist in flow definition."
                     )
+        from .validation import deprecated_uses  # imported here: validation imports every action module
+        for notice in deprecated_uses(flow_def):
+            self.logger.logger.warning(f"{flow_def.name}: {notice}")
 
         start_time = local_now()
 

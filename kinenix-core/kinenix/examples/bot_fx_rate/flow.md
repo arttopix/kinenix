@@ -23,7 +23,6 @@
 - **url:** `${config.url}`
 - **headless:** `${config.headless}`
 - **timeout:** 60000
-- **on_error:** retry
 - **max_retries:** 2
 - **retry_interval:** 5.0
 
@@ -34,7 +33,6 @@
 
 ### 5. Open Currency Filter (`web.click`)
 - **selector:** `#dropdownCurrency`
-- **on_error:** retry
 - **max_retries:** 2
 - **retry_interval:** 2.0
 
@@ -79,7 +77,6 @@
 
 ### 16. Search Historical Rates (`web.click`)
 - **selector:** `button.historical-btn`
-- **on_error:** retry
 - **max_retries:** 2
 - **retry_interval:** 3.0
 
@@ -101,7 +98,6 @@
     - **min_rows:** 1
     - **timeout:** 15000
     - **output_var:** `currency_rows`
-    - **on_error:** retry
     - **max_retries:** 2
     - **retry_interval:** 2.0
   - Collect Currency Rows (`logic.append`):
@@ -113,7 +109,6 @@
 - **file_path:** `${config.output_path}`
 - **data:** `${fx_rows}`
 - **columns:** ["Currency", "Date", "Buying Transfer Rate"]
-- **on_error:** retry
 - **max_retries:** 2
 - **retry_interval:** 2.0
 
@@ -130,6 +125,5 @@
 - **body:** `${config.email.body}`
 - **attachments:** ["${config.output_path}"]
 - **dry_run:** `${config.email.dry_run}`
-- **on_error:** retry
 - **max_retries:** 2
 - **retry_interval:** 10.0

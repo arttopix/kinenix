@@ -172,3 +172,20 @@ def test_fetch_status_passes_auth_and_raises_on_http_error():
     with patch("kinenix_hub.console.requests.get", return_value=denied):
         with pytest.raises(requests.HTTPError):
             hub_console.fetch_status("http://orch:8080", None, 5)
+
+
+def test_logs_finds_an_execution_by_the_run_id_that_kinenix_run_prints():
+    listing = MagicMock(status_code=200)
+    listing.json.return_value = {"executions": [
+        {"id": "a1b2c3", "details": {"run_id": "20261028T101500-abcd"}},
+        {"id": "d4e5f6", "details": None},
+    ]}
+    steps = MagicMock(status_code=200)
+    steps.json.return_value = {"id": "a1b2c3", "steps": []}
+    with patch("kinenix_hub.console.requests.get", side_effect=[listing, steps]) as get:
+        assert hub_console.fetch_execution_log("http://hub:8080", None, "20261028T1015")["id"] == "a1b2c3"
+    assert get.call_args_list[1].args[0] == "http://hub:8080/api/v1/executions/a1b2c3/steps"
+
+    with patch("kinenix_hub.console.requests.get", return_value=listing):
+        with pytest.raises(LookupError, match="execution or run ID"):
+            hub_console.fetch_execution_log("http://hub:8080", None, "nothing")

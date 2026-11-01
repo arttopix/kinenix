@@ -66,7 +66,7 @@ def test_dashboard_shows_malicious_text_without_running_it(monkeypatch):
     monkeypatch.setattr(hub_config, "DASHBOARD_PASSWORD", "")
     monkeypatch.setattr(hub_config, "DASHBOARD_PASSWORD_HASH", "")
 
-    local = TestClient(app, client=("127.0.0.1", 50000))
+    local = TestClient(app, base_url="http://127.0.0.1:8080", client=("127.0.0.1", 50000))
     local.post("/api/v1/heartbeat", json={
         "worker_id": "xss-worker", "name": PAYLOAD, "os_info": PAYLOAD, "ip_address": PAYLOAD,
         "ram_usage": PAYLOAD, "current_task": PAYLOAD,

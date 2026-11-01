@@ -11,6 +11,7 @@ Each topic has one owning document. Other files link here instead of repeating t
 | [benchmarks/flow_format.md](benchmarks/flow_format.md) | Benchmark: local AI models writing flows in `flow.md` vs YAML, and why Kinenix keeps `flow.md` |
 | [design/expressions.md](design/expressions.md) | Design of expressions in `${...}` and `and` / `or` / `not` in conditions (0.3.0b1) |
 | [design/agent-interface.md](design/agent-interface.md) | Design of the agent interface: exit codes, `--json`, tools, error codes, safety; foundation in 1.0.0, interface in 1.1.0 |
+| [design/threat-model.md](design/threat-model.md) | Threat model of core, worker, and Hub: what is protected, trust assumptions, threats with their milestone, review plan and findings |
 | [design/phase-2.md](design/phase-2.md) | Phase 2 design: On Error and Finally, subflow context, run records for AI questions, Hub tables and views, redaction (proposal) |
 
 ## Build Flows
@@ -36,6 +37,8 @@ Each topic has one owning document. Other files link here instead of repeating t
 | [ask_router.md](ask_router.md) | Natural-language questions to the Hub (work in progress) |
 | [../kinenix-worker/README.md](../kinenix-worker/README.md) | Worker CLI and Raspberry Pi setup |
 | [../CHANGELOG.md](../CHANGELOG.md) | Changes and upgrade notes of each release |
+| [compatibility.md](compatibility.md) | What stays stable for all of 1.x, what may change, deprecations, and upgrading |
+| [../SECURITY.md](../SECURITY.md) | Supported versions and how to report a vulnerability privately |
 | [releasing.md](releasing.md) | Publishing `kinenix`, `kinenix-hub`, and `kinenix-worker` to PyPI with Trusted Publishing |
 | [../kinenix-studio/README.md](../kinenix-studio/README.md) | Studio design and layout |
 

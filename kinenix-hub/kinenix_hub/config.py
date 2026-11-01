@@ -2,6 +2,7 @@ import logging
 import os
 from pathlib import Path
 
+from . import settings_file
 from .settings_file import legacy_name, read_saved_settings, settings_path
 
 logger = logging.getLogger("kinenix.hub.config")
@@ -41,10 +42,13 @@ def settings_exist() -> bool:
 def log_legacy_names() -> None:
     if LEGACY_NAMES_USED:
         logger.warning(
-            "Deprecated environment variable(s) %s: rename them to %s.",
+            "Deprecated environment variable(s) %s, removed in Kinenix 2.0: rename them to %s.",
             ", ".join(sorted(set(LEGACY_NAMES_USED))),
             ", ".join(sorted({n.replace("ORCHESTRATOR_", "KINENIX_HUB_", 1) for n in LEGACY_NAMES_USED})),
         )
+    for old, new in settings_file.LEGACY_USED.items():
+        logger.warning("Deprecated: %s is read in place of %s; Kinenix 2.0 will not read it. Rename it to %s.",
+                       old, new, new)
 
 
 # Database: SQLite in the user's ~/.kinenix folder by default, so data survives reinstalls and stays out of

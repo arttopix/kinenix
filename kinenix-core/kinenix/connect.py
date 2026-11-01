@@ -11,6 +11,7 @@ from urllib.parse import urlparse
 
 import requests
 
+from . import exit_codes
 from .env import LEGACY_NAMES, env_source, get_env
 from .workspace import save_settings, saved_settings, settings_file
 
@@ -49,6 +50,10 @@ def describe_unreachable(url: str, error: requests.RequestException) -> str:
         hint = " Names ending in .local need mDNS (Avahi) on both machines." if host.endswith(".local") else ""
         return (f"Cannot find the address of '{host}'. Check the name, or use the Hub's IP address "
                 f"(on the Hub: hostname -I).{hint}")
+    if isinstance(error, requests.ReadTimeout):
+        # The connection was accepted, so nothing blocks the port: the Hub is busy or stuck
+        return (f"{host} accepted the connection on port {port} but did not answer within {TIMEOUT} s; "
+                f"the Hub may be busy or stuck (on the Hub: kinenix hub status, or restart it).")
     if isinstance(error, requests.Timeout):
         return f"No answer from {host} on port {port} within {TIMEOUT} s; a firewall may block the port."
     return (f"{host} was found, but nothing accepts connections on port {port}: the Hub is not running there, "
@@ -110,7 +115,7 @@ def show() -> int:
     print(f"Key:  {'set, from ' + sources[key_source] if key_source else 'not set'}")
     result = check(url.rstrip("/"), get_env(API_KEY) or None)
     print(result.message)
-    return 0 if result.usable else 1
+    return exit_codes.OK if result.usable else exit_codes.UNREACHABLE
 
 
 def connect(url_text: str, key: Optional[str], verify: bool = True) -> int:
@@ -119,13 +124,13 @@ def connect(url_text: str, key: Optional[str], verify: bool = True) -> int:
         url = normalize_url(url_text)
     except ValueError as e:
         print(f"Error: {e}")
-        return 1
+        return exit_codes.USAGE
     key_checked = False
     if verify:
         result = check(url, key)
         if not result.usable:
             print(f"Error: {result.message} Nothing was saved.")
-            return 1
+            return exit_codes.UNREACHABLE
         print(result.message)
         key_checked = result.key_checked
     path = save_settings({URL_KEY: url, API_KEY: key or None})
