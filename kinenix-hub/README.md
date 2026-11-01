@@ -2,7 +2,7 @@
 
 The **Kinenix Hub** is the central server of [Kinenix](https://github.com/arttopix/kinenix), an open-source, local AI-native RPA framework in Python. Workers report to it, and you watch everything from one place.
 
-> **Status: beta.** Job dispatch from the Hub to workers is planned; today workers run their own schedules and report to the Hub.
+> **Status: release candidate for 1.0.0.** Job dispatch from the Hub to workers is planned; today workers run their own schedules and report to the Hub.
 
 - Receives heartbeats from workers and shows each one as online, busy, or offline
 - Stores every execution with its steps, timings, and errors (SQLite by default, any SQLAlchemy database through `DATABASE_URL`)
@@ -16,7 +16,7 @@ The **Kinenix Hub** is the central server of [Kinenix](https://github.com/arttop
 pip install "kinenix[hub]"
 ```
 
-This installs `kinenix-hub` together with `kinenix`, which provides the `kinenix hub` command. Requires Python 3.10 or newer.
+This installs `kinenix-hub` together with `kinenix`, which provides the `kinenix hub` command. Requires Python 3.12 or newer.
 
 ## Usage
 

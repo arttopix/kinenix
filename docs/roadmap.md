@@ -19,7 +19,7 @@ Toward 1.0.0, a `flow.md` written for 1.0 keeps running on every 1.x version.
 | 0.3.0b1: Expressions | Count, join, clean, and calculate values in `${...}`, safely | 2026-10-20 | Released |
 | 0.4.0b1: Web actions | Modern web pages without multi-step workarounds | 2026-10-23 | Released |
 | 0.5.0b1: Proven on business flows | A tutorial and a business example, run by CI with a real browser, and testing flows against saved pages | 2026-10-28 | Released |
-| 1.0.0: Stable core | A core that can be trusted, with a written stability promise | 2026-11-03 | Planned |
+| 1.0.0: Stable core | A core that can be trusted, with a written stability promise | 2026-11-06 | Planned |
 | 1.1.0: Agent interface | AI agents, small local ones first, can use Kinenix: ask about runs, start runs, and read the results | After 1.0.0 | Planned |
 | 1.2.0: Developer tools | See and check flows in the editor | After 1.1.0 | Planned |
 
@@ -123,7 +123,7 @@ Release:
 
 **Goal:** a core that can be trusted: what 1.0 keeps stable is written down, old names that will go are announced, and the release candidate has run on real machines before the final release.
 
-**Scope:** the release checklist issue, and issues found while testing the release candidate. The date is kept (decided 2026-10-28): code by 2026-10-30, the release candidate on 2026-10-31, the 48-hour soak until 2026-11-02, only bug fixes after the candidate. Moved to 1.1.0: the `invoice_check` and `daily_sales_report` examples, #118 (docs structure), and #125 (AI assistant benchmark).
+**Scope:** the release checklist issue, and issues found while testing the release candidate. Moved from 2026-11-03 to 2026-11-06 (decided 2026-11-01) so the 48-hour soak runs in full and leaves time for fixes: the release candidate on 2026-11-02, the soak until 2026-11-04, only bug fixes after the candidate. Moved to 1.1.0: the `invoice_check` and `daily_sales_report` examples, #118 (docs structure), and #125 (AI assistant benchmark).
 
 **Exit criteria**
 
@@ -136,9 +136,9 @@ Before the release candidate:
 - [x] Security checks in CI on every pull request: `pip-audit` (no dependency with a known vulnerability) and `bandit` (every finding fixed or explained in the code)
 - [x] Failure-injection tests: the Hub is down or slow during a run (the run completes, the log is kept, one warning); an input file is missing; the browser closes in the middle of a loop (Finally still runs, no browser process is left)
 - [x] `docs/releasing.md` installs from TestPyPI without its broken copies of other packages
-- [ ] Release `1.0.0rc1` (2026-10-31)
+- [ ] Release `1.0.0rc1` (2026-11-02)
 
-Check of 1.0.0rc1 (2026-10-31 to 2026-11-02):
+Check of 1.0.0rc1 (2026-11-02 to 2026-11-04):
 - [ ] Soak: the Raspberry Pi worker runs the offline examples (`hello`, `quote_requests`, the tutorial solution) every 30 minutes for 48 hours and reports to the Ubuntu Hub: no failure caused by Kinenix, memory does not grow, no browser process is left behind; a baseline (time and memory of a 100-item loop on the Raspberry Pi) is written in `docs/examples.md`
 - [ ] `bot_fx_rate` runs on its cron schedule on the worker
 - [ ] Ubuntu Hub: every run and failure is recorded, and `report`, `logs`, and `query` answer correctly
@@ -220,7 +220,7 @@ Ordered so that safety and predictable runtime behavior come before new distribu
 
 GitHub Actions workflow `.github/workflows/ci.yml` runs on pushes and pull requests to `main` and `dev`:
 
-- [x] Python 3.10 and 3.14 on Ubuntu, and Python 3.10 on Windows.
+- [x] Python 3.12 and 3.14 on Ubuntu, and Python 3.12 on Windows.
 - [x] Installs `kinenix-core`, `kinenix-worker`, `kinenix-studio`, and `kinenix-hub` with development dependencies.
 - [x] Runs every pytest suite, including `kinenix-hub/tests`.
 - [x] Builds the Studio frontend with `npm ci` and `npm run build`.

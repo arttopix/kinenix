@@ -54,7 +54,7 @@ Kinenix Studio operates as an interactive development layer running locally on t
 
 | Tier | Technology | Purpose & Rationale |
 | :--- | :--- | :--- |
-| **Backend Engine** | **FastAPI (Python 3.10+)** | Native async runtime, bi-directional WebSockets, and zero-friction integration with `kinenix-core` Pydantic models. |
+| **Backend Engine** | **FastAPI (Python 3.12+)** | Native async runtime, bi-directional WebSockets, and zero-friction integration with `kinenix-core` Pydantic models. |
 | **Frontend Framework** | **React + Vite (TypeScript)** | Industry-standard developer experience, fast Hot Module Replacement (HMR), and strict type safety for flow definitions. |
 | **Styling & UI Kit** | **Tailwind CSS + shadcn/ui** | Modern, accessible dark-mode UI components (Tabs, Collapsibles, Dialogs, Badges) tailored for developer tools. |
 | **Panel Management** | **`react-resizable-panels`** | Smooth, collapsible multi-column layout for customizable workspace widths. |

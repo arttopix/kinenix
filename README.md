@@ -3,7 +3,7 @@
 [![Status](https://img.shields.io/badge/Status-1.0%20release%20candidate-yellow.svg?style=flat-square)](CHANGELOG.md)
 [![CI](https://github.com/arttopix/kinenix/actions/workflows/ci.yml/badge.svg)](https://github.com/arttopix/kinenix/actions/workflows/ci.yml)
 [![PyPI](https://img.shields.io/pypi/v/kinenix.svg?style=flat-square)](https://pypi.org/project/kinenix/)
-[![Python](https://img.shields.io/badge/Python-3.10%2B-brightgreen.svg?style=flat-square)](#)
+[![Python](https://img.shields.io/badge/Python-3.12%2B-brightgreen.svg?style=flat-square)](#)
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg?style=flat-square)](LICENSE)
 
 > **Open-source Python framework for automation flows written in Markdown.**  
@@ -45,7 +45,7 @@ Before installing and running kinenix, ensure your system meets the following re
 ### Core Requirements
 | Component | Minimum Version | Notes |
 | :--- | :--- | :--- |
-| **Python** | `3.10` or higher | Recommended `3.10` - `3.12` with `pip` and `venv` |
+| **Python** | `3.12` or higher | Tested on `3.12` and `3.14`; install with `pip` and `venv` |
 | **Git** | `2.30+` | Required for version control and GitOps flow deployments |
 | **Operating System** | Windows 10/11, Ubuntu 20.04+, Debian 11+, Raspberry Pi OS (64-bit), macOS 12+ | Fully cross-platform |
 
@@ -63,7 +63,7 @@ playwright install --with-deps chromium
 ```
 
 #### Windows
-Ensure Python 3.10+ is installed with **"Add python.exe to PATH"** checked. Install Playwright browser binaries with:
+Ensure Python 3.12 or newer is installed with **"Add python.exe to PATH"** checked. Install Playwright browser binaries with:
 ```powershell
 kinenix install-browsers
 # or: playwright install chromium
