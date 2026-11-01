@@ -27,7 +27,7 @@ The live log (`.jsonl`) gets one JSON line per step as soon as the step ends. It
 
 ### Key Benefits:
 - **Instant Triage:** Log filenames immediately show the execution time and status (`_success` or `_failed`), allowing developers and operations teams to spot failures without opening files.
-- **Smart Directory Resolution:** Regardless of the Current Working Directory (CWD) from which a command is executed, `resolve_log_dir` automatically locates the project root and writes logs centrally to `<project_root>/logs/`.
+- **Logs stay with the flow:** whichever folder a command is started from, `resolve_log_dir` writes to `logs/` at the root of the git repository that holds the flow, or to `logs/` in the flow's own folder when it is not in a repository. `--log-dir` and `KINENIX_LOG_DIR` choose another folder. A worker writes the log of a `--sandbox` run next to the original bundle.
 
 ---
 

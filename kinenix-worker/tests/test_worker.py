@@ -97,3 +97,24 @@ def test_sandbox_copy_keeps_outputs_but_not_the_env_file(tmp_path: Path, monkeyp
     assert not (copy / ".env").exists()
     assert (copy / ".env.example").exists() and (copy / ".envrc").exists()
     assert (bundle / ".env").exists()  # the original bundle is not touched
+
+
+def test_worker_logs_belong_to_the_original_bundle(tmp_path: Path, monkeypatch):
+    """A worker started from another folder, or running a --sandbox copy, logs next to the original bundle."""
+    import kinenix_worker.runner as runner_module
+    seen = {}
+    real_logger = runner_module.ExecutionLogger
+
+    def recording_logger(log_dir=None, flow_path=None):
+        seen["flow_path"] = flow_path
+        return real_logger(log_dir=str(tmp_path / "logs"))
+
+    monkeypatch.setattr(runner_module, "ExecutionLogger", recording_logger)
+    monkeypatch.setattr(Path, "home", lambda: tmp_path / "home")
+    bundle = tmp_path / "bot"
+    bundle.mkdir()
+    (bundle / "flow.md").write_text("# Bot\n\n## Steps\n\n### 1. Wait (`logic.delay`)\n- **seconds:** 0\n",
+                                    encoding="utf-8")
+    result = WorkerRunner().execute_flow(str(bundle), use_sandbox=True)
+    assert result["status"] == "success"
+    assert seen["flow_path"] == (bundle / "flow.md").resolve()

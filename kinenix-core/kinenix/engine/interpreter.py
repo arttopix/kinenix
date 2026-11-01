@@ -554,8 +554,6 @@ class FlowInterpreter:
         self.logger.log_step_start(step.id, step.name, step.action)
         start_time = local_now()
 
-        evaluated_params = VariableEvaluator.evaluate_value(step.parameters, context.variables)
-
         # For logic.if, `condition` chooses the branch (see _handle_if_step). As a step gate it would skip
         # the step, and Else-steps would never run
         if step.condition and step.action != "logic.if":
@@ -572,6 +570,13 @@ class FlowInterpreter:
                 )
                 self._record(context, result, step)
                 return
+
+        # Parameters are evaluated only for a step that runs, so its condition can guard them (#145). A loop's
+        # item_label names each item and is evaluated per item, once <item_var> and <item_var>_index exist
+        params = step.parameters
+        if step.action == "logic.loop":
+            params = {k: v for k, v in params.items() if k != "item_label"}
+        evaluated_params = VariableEvaluator.evaluate_value(params, context.variables)
 
         if step.action == "logic.loop":
             self._handle_loop_step(step, evaluated_params, context, start_time)

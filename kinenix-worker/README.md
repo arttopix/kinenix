@@ -125,7 +125,7 @@ kinenix-worker run flows/examples/rpachallenge
 
 With the URL set:
 
-- Every run sends its execution log to the Hub. `--log-dir` is not needed; it only controls whether a local log file is also written.
+- Every run sends its execution log to the Hub. A local copy is also written to `logs/` of the flow's project (or its git repository); `--log-dir` chooses another folder.
 - Every run reports the worker as busy while the flow runs and online when it finishes.
 - Every command that runs flows (`run`, `watch`, `schedule`, `daemon`) also sends a heartbeat every `KINENIX_HEARTBEAT_INTERVAL` seconds, including during long flows. The dashboard shows the worker as offline when heartbeats stop.
 - If the Hub is unreachable, flows still run. The worker logs one warning, then logs again when the connection recovers.
@@ -212,4 +212,4 @@ options:
 - `flow_path`: Flow name, project bundle directory, or path to a `flow.md`.
 - `--sandbox`: Run from a separate copy of the bundle in `~/.kinenix/workspaces/<job_id>`. The flow's outputs stay in that copy; its `.env` files are deleted when the run ends. Not isolation: the flow has the same rights as without it.
 - `--vars`: JSON string of variables to override.
-- `--log-dir`: Also write a local JSON execution log to this directory. Telemetry to the Hub does not depend on it.
+- `--log-dir`: Write the local JSON execution log to this directory instead of `logs/` of the flow's project. Telemetry to the Hub does not depend on it.
