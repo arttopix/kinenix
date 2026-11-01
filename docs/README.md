@@ -38,6 +38,7 @@ Each topic has one owning document. Other files link here instead of repeating t
 | [../kinenix-worker/README.md](../kinenix-worker/README.md) | Worker CLI and Raspberry Pi setup |
 | [../CHANGELOG.md](../CHANGELOG.md) | Changes and upgrade notes of each release |
 | [compatibility.md](compatibility.md) | What stays stable for all of 1.x, what may change, deprecations, and upgrading |
+| [../SECURITY.md](../SECURITY.md) | Supported versions and how to report a vulnerability privately |
 | [releasing.md](releasing.md) | Publishing `kinenix`, `kinenix-hub`, and `kinenix-worker` to PyPI with Trusted Publishing |
 | [../kinenix-studio/README.md](../kinenix-studio/README.md) | Studio design and layout |
 

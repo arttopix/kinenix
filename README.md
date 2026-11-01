@@ -1,26 +1,27 @@
 # kinenix
 
-[![Status](https://img.shields.io/badge/Status-Active%20Development%20(WIP)-orange.svg?style=flat-square)](#)
+[![Status](https://img.shields.io/badge/Status-1.0%20release%20candidate-yellow.svg?style=flat-square)](CHANGELOG.md)
 [![CI](https://github.com/arttopix/kinenix/actions/workflows/ci.yml/badge.svg)](https://github.com/arttopix/kinenix/actions/workflows/ci.yml)
 [![PyPI](https://img.shields.io/pypi/v/kinenix.svg?style=flat-square)](https://pypi.org/project/kinenix/)
-[![Python](https://img.shields.io/badge/Python-3.10%2B-brightgreen.svg?style=flat-square)](#)
+[![Python](https://img.shields.io/badge/Python-3.12%2B-brightgreen.svg?style=flat-square)](#)
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg?style=flat-square)](LICENSE)
 
-> **Project Status: Active Development (Pre-Alpha / Work-in-Progress)**  
-> kinenix is currently under rapid, active development. Core engine APIs, subflow execution specifications, and action schemas are evolving. It is not yet intended for mission-critical production deployments. Community feedback and contributions are warmly welcome!
+> **Open-source Python framework for automation flows written in Markdown.**  
+> Describe the task, let your AI assistant write the flow, then run it on any PC or Raspberry Pi. Free unattended workers and a self-hosted Hub for every run.
 
-> **Open-Source, Local AI-Native Agentic Automation Framework**  
-> Next-generation Enterprise RPA powered by Python and on-device Small Language Models (SLMs). Eliminate commercial licensing overhead with autonomous agent workflows, zero-license Excel automation, and 100% free unattended robot workers.
+> **Status: 1.0 release candidate.** From 1.0.0, the `flow.md` format, the CLI commands and exit codes, the log format, and the Hub's data stay compatible for all of 1.x ([compatibility.md](docs/compatibility.md)). Feedback and contributions are welcome.
 
 ---
 
-## 1. Key Highlights & Core Philosophy
+## 1. Key Highlights
 
-- **Local AI-Native Architecture:** Architected from the ground up for on-device Small Language Models (SLMs) running 100% locally on CPU (e.g., Qwen 2.5, Llama 3.2 via Ollama or GGUF). Powers structured extraction, AI decision steps, and plain-language failure diagnosis (self-healing selectors are planned) with zero API token costs and complete data privacy.
-- **Zero-License Office Dependency:** No Microsoft 365 or Microsoft Excel installation required for spreadsheet operations. High-performance file-level processing is natively handled via `openpyxl` and `pandas`.
-- **Business-First Mindset:** Telemetry and executive dashboards emphasize tangible business outcomes: Return on Investment (ROI), total hours saved, and cost reductions rather than pure technical stack traces.
-- **Free Unlimited Unattended Workers:** Deploy robot worker daemons across any existing VMs, PCs, or edge devices with zero per-bot monthly licensing fees.
-- **Python Power and Extensibility:** Clean plugin architecture (`BaseAction`) seamlessly integrating Web automation (Playwright), Excel/CSV, REST APIs, email, and AI models.
+- **Flows in Markdown:** A flow is one `flow.md` file that people can read and AI assistants can write. `kinenix init` gives every project a `requirements.md` and an `AGENTS.md` for the assistant, and `kinenix validate` checks a flow before it runs.
+- **Free unattended workers:** `kinenix-worker` runs flows on a schedule, a cron expression, or when a file arrives, on Windows, Linux, and Raspberry Pi, with no per-robot license.
+- **Excel without Office:** Read and write spreadsheets and CSV files with `openpyxl` and `pandas`; no Microsoft Excel installation needed.
+- **Self-hosted Hub:** Workers send every run and heartbeat to a Hub on your own network. See failures on the dashboard, or ask with `kinenix hub status`, `logs`, `report`, and `query`.
+- **Built for diagnosis:** Every run writes a structured JSON log with the failed step, its line in `flow.md`, a plain-language cause and fix, and a screenshot for web steps. Exit codes tell scripts and AI assistants whether a run failed on data or on a technical problem.
+- **Your data stays local:** Passwords and personal data are hidden in logs and telemetry before they leave the run. The optional AI steps (`ai.prompt`, `ai.extract`) use a local model through Ollama.
+- **Python and extensible:** Built-in actions for web (Playwright), Excel and CSV, files, HTTP, email, dates, and flow control, on a plugin base (`BaseAction`) for your own.
 
 ---
 
@@ -44,7 +45,7 @@ Before installing and running kinenix, ensure your system meets the following re
 ### Core Requirements
 | Component | Minimum Version | Notes |
 | :--- | :--- | :--- |
-| **Python** | `3.10` or higher | Recommended `3.10` - `3.12` with `pip` and `venv` |
+| **Python** | `3.12` or higher | Tested on `3.12` and `3.14`; install with `pip` and `venv` |
 | **Git** | `2.30+` | Required for version control and GitOps flow deployments |
 | **Operating System** | Windows 10/11, Ubuntu 20.04+, Debian 11+, Raspberry Pi OS (64-bit), macOS 12+ | Fully cross-platform |
 
@@ -62,7 +63,7 @@ playwright install --with-deps chromium
 ```
 
 #### Windows
-Ensure Python 3.10+ is installed with **"Add python.exe to PATH"** checked. Install Playwright browser binaries with:
+Ensure Python 3.12 or newer is installed with **"Add python.exe to PATH"** checked. Install Playwright browser binaries with:
 ```powershell
 kinenix install-browsers
 # or: playwright install chromium

@@ -10,7 +10,7 @@ kinenix install-browsers          # Playwright Chromium, needed for web actions
 kinenix-worker info
 ```
 
-Requires Python 3.10 or newer. To report to a Kinenix Hub, run `kinenix connect http://<hub-ip>:8080` (section 3D). The Raspberry Pi quickstart below installs from the repository instead and also sets up a systemd service.
+Requires Python 3.12 or newer. To report to a Kinenix Hub, run `kinenix connect http://<hub-ip>:8080` (section 3D). The Raspberry Pi quickstart below installs from the repository instead and also sets up a systemd service.
 
 ---
 
@@ -47,7 +47,7 @@ cd kinenix
 
 The script automatically:
 1. Installs required Linux shared libraries for Chromium on aarch64.
-2. Creates a Python 3.10+ virtual environment (`.venv`).
+2. Creates a Python 3.12+ virtual environment (`.venv`).
 3. Installs `kinenix-core` and `kinenix-worker` in editable mode.
 4. Installs the ARM64 Playwright Chromium browser.
 5. Verifies the installation with `kinenix-worker info`.
@@ -75,7 +75,7 @@ Kinenix Worker System Information:
   os_release: 6.6.x+rpt-rpi-v8
   machine: aarch64
   processor: aarch64
-  python_version: 3.11.x
+  python_version: 3.13.x
   cpu_count: 4
   memory_total_mb: 3884.2
   memory_available_mb: 3200.1

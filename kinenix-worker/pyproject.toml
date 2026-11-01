@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "kinenix-worker"
 dynamic = ["version"]
-description = "Kinenix Worker: runs Kinenix flows unattended on schedules, cron, or file triggers, and reports to the Kinenix Hub"
+description = "Kinenix Worker: runs Kinenix flows unattended on a schedule, a cron expression, or when files arrive, and reports every run to the Kinenix Hub"
 readme = "README.md"
 license = "Apache-2.0"
 license-files = ["LICENSE", "NOTICE"]
@@ -21,9 +21,9 @@ classifiers = [
     "Topic :: Office/Business",
     "Topic :: System :: Distributed Computing",
 ]
-requires-python = ">=3.10"
+requires-python = ">=3.12"
 dependencies = [
-    "kinenix>=0.5.0b1",
+    "kinenix>=1.0.0rc1",
     "psutil>=5.9.0",
     "requests>=2.28.0",
     "rich>=13.0.0"
