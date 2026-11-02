@@ -2,9 +2,9 @@
 
 `kinenix`, `kinenix-hub`, and `kinenix-worker` are released together with one version. How to release: [docs/releasing.md](docs/releasing.md).
 
-## Unreleased
+## 1.0.0rc2 (2026-11-02)
 
-Fixes found while testing 1.0.0rc1.
+Fixes found while testing 1.0.0rc1, which was published only on TestPyPI. Upgrading from 0.5.0b1: read the notes of 1.0.0rc1 below; they apply to 1.0.0rc2.
 
 ### Fixed
 
@@ -12,7 +12,7 @@ Fixes found while testing 1.0.0rc1.
 - Logs were written to `logs/` of the folder a command was started from when the flow was not in a git repository, so `kinenix run demo` from the home folder left `~/logs` behind. They now go to the flow's project folder (or the git repository that holds it), for `kinenix run` and `kinenix-worker`; a `--sandbox` run logs next to the original bundle.
 - A constant in `connect.py` that holds the name of the key setting was taken for a secret by CodeQL; renamed.
 
-## 1.0.0rc1 (2026-11-02)
+## 1.0.0rc1 (2026-11-01, TestPyPI only)
 
 The stable core: what stays the same for all of 1.x is written down in [docs/compatibility.md](docs/compatibility.md), commands end with exit codes that say what happened, and the code went through a threat model, a security review, and security checks in CI. Flows written for 0.5.0b1 run unchanged.
 
