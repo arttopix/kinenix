@@ -136,9 +136,9 @@ Before the release candidate:
 - [x] Security checks in CI on every pull request: `pip-audit` (no dependency with a known vulnerability) and `bandit` (every finding fixed or explained in the code)
 - [x] Failure-injection tests: the Hub is down or slow during a run (the run completes, the log is kept, one warning); an input file is missing; the browser closes in the middle of a loop (Finally still runs, no browser process is left)
 - [x] `docs/releasing.md` installs from TestPyPI without its broken copies of other packages
-- [ ] Release `1.0.0rc1` (2026-11-02)
+- [ ] Release `1.0.0rc2` (2026-11-02). `1.0.0rc1` went only to TestPyPI: testing it on a clean Ubuntu user and with a flow built by an AI assistant found #145 and logs written to the current folder, fixed in rc2
 
-Check of 1.0.0rc1 (2026-11-02 to 2026-11-04):
+Check of 1.0.0rc2 (2026-11-02 to 2026-11-04):
 - [ ] Soak: the Raspberry Pi worker runs the offline examples (`hello`, `quote_requests`, the tutorial solution) every 30 minutes for 48 hours and reports to the Ubuntu Hub: no failure caused by Kinenix, memory does not grow, no browser process is left behind; a baseline (time and memory of a 100-item loop on the Raspberry Pi) is written in `docs/examples.md`
 - [ ] `bot_fx_rate` runs on its cron schedule on the worker
 - [ ] Ubuntu Hub: every run and failure is recorded, and `report`, `logs`, and `query` answer correctly

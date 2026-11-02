@@ -15,8 +15,9 @@ from . import exit_codes
 from .env import LEGACY_NAMES, env_source, get_env
 from .workspace import save_settings, saved_settings, settings_file
 
-URL_KEY = "KINENIX_HUB_URL"
-API_KEY = "KINENIX_HUB_API_KEY"
+# Names of the settings, not their values (CodeQL takes a constant named API_KEY for a secret)
+URL_SETTING = "KINENIX_HUB_URL"
+KEY_SETTING = "KINENIX_HUB_API_KEY"
 DEFAULT_PORT = 8080
 TIMEOUT = 5
 
@@ -93,27 +94,27 @@ def _environment_value(name: str) -> str:
 def _environment_warnings(url: Optional[str]) -> list:
     """Values in the environment win over the saved ones; say so when they differ."""
     warnings = []
-    env_url = _environment_value(URL_KEY)
+    env_url = _environment_value(URL_SETTING)
     if env_url and env_url.rstrip("/") != (url or ""):
         warnings.append(f"KINENIX_HUB_URL={env_url} is set in the environment and takes precedence over "
                         f"`kinenix connect`. Remove it (a worker service reads ~/.kinenix/worker.env) for this to apply.")
-    if _environment_value(API_KEY):
+    if _environment_value(KEY_SETTING):
         warnings.append("KINENIX_HUB_API_KEY is set in the environment and takes precedence over the saved key.")
     return warnings
 
 
 def show() -> int:
     """`kinenix connect` without arguments: the Hub in use, where it comes from, and whether it answers."""
-    url = get_env(URL_KEY)
+    url = get_env(URL_SETTING)
     if not url:
         print("Not connected to a Hub: runs are kept on this machine only.")
         print("Connect with: kinenix connect http://<hub-address>:8080")
         return 0
     sources = {"environment": "environment variable", "saved": str(settings_file())}
-    print(f"Hub:  {url}  (from {sources[env_source(URL_KEY)]})")
-    key_source = env_source(API_KEY)
+    print(f"Hub:  {url}  (from {sources[env_source(URL_SETTING)]})")
+    key_source = env_source(KEY_SETTING)
     print(f"Key:  {'set, from ' + sources[key_source] if key_source else 'not set'}")
-    result = check(url.rstrip("/"), get_env(API_KEY) or None)
+    result = check(url.rstrip("/"), get_env(KEY_SETTING) or None)
     print(result.message)
     return exit_codes.OK if result.usable else exit_codes.UNREACHABLE
 
@@ -133,7 +134,7 @@ def connect(url_text: str, key: Optional[str], verify: bool = True) -> int:
             return exit_codes.UNREACHABLE
         print(result.message)
         key_checked = result.key_checked
-    path = save_settings({URL_KEY: url, API_KEY: key or None})
+    path = save_settings({URL_SETTING: url, KEY_SETTING: key or None})
     print(f"Saved in {path}: `kinenix run` and kinenix-worker on this machine send runs to {url}.")
     if not key and not key_checked:
         print("Warning: no key was saved, and the Hub could not confirm that it needs none. If it uses a key, "
@@ -144,8 +145,8 @@ def connect(url_text: str, key: Optional[str], verify: bool = True) -> int:
 
 
 def disconnect() -> int:
-    had = bool(saved_settings().get(URL_KEY))
-    path = save_settings({URL_KEY: None, API_KEY: None})
+    had = bool(saved_settings().get(URL_SETTING))
+    path = save_settings({URL_SETTING: None, KEY_SETTING: None})
     print(f"Removed the saved Hub from {path}." if had else "No Hub was saved on this machine.")
     for warning in _environment_warnings(None):
         print(f"Warning: {warning}")

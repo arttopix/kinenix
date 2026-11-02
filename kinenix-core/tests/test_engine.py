@@ -112,6 +112,25 @@ def test_resolve_log_dir(tmp_path):
     assert resolved.name == "logs"
 
 
+def test_logs_of_a_flow_go_to_its_project_not_the_current_folder(tmp_path, monkeypatch):
+    from kinenix.engine.logger import resolve_log_dir
+
+    # A pip user runs `kinenix run demo` from the home folder: logs belong to the project, not ~/logs
+    monkeypatch.delenv("KINENIX_LOG_DIR", raising=False)
+    project = tmp_path / "kinenix-flows" / "demo"
+    project.mkdir(parents=True)
+    (project / "flow.md").write_text("# Demo\n", encoding="utf-8")
+    elsewhere = tmp_path / "home"
+    elsewhere.mkdir()
+    monkeypatch.chdir(elsewhere)
+    assert resolve_log_dir(flow_path=project / "flow.md") == project.resolve() / "logs"
+    assert resolve_log_dir(flow_path=project) == project.resolve() / "logs"
+
+    # A flow inside a git repository keeps writing to the repository's logs/
+    (tmp_path / "kinenix-flows" / ".git").mkdir()
+    assert resolve_log_dir(flow_path=project / "flow.md") == (tmp_path / "kinenix-flows").resolve() / "logs"
+
+
 def test_logic_if_action():
     # 1. True condition
     flow_true = FlowDefinition(

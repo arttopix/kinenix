@@ -175,7 +175,7 @@ kinenix run tiph_quotes --config config/test.json
 ```
 
 ### 3.2 Custom Log Directory (`--log-dir`)
-By default, Kinenix automatically detects the project root and writes structured JSON logs into `<project_root>/logs/`. You can override this location using `--log-dir`:
+By default, Kinenix writes structured JSON logs into `logs/` of the flow's project folder, or of the git repository that holds the project, whichever folder the command is started from. You can override this location using `--log-dir` or `KINENIX_LOG_DIR`:
 
 ```powershell
 kinenix run rpachallenge --log-dir "./custom_logs"
