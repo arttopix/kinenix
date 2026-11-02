@@ -272,6 +272,33 @@ def test_loop_items_without_item_label_use_their_first_three_fields(tmp_path):
     assert read(bundle, "error.txt").startswith("R2 HONDA HR-V|2|3|")
 
 
+def test_item_label_may_calculate_with_the_loop_index(tmp_path):
+    # #145: item_label was evaluated before the loop set req_index, so ${req_index + 1} stopped the run
+    md = LOOP.replace("{label}", "- **item_label:** ${req.request_id} #${req_index + 1}\n")
+    ctx, bundle = run(tmp_path, md, config={"requests": REQUESTS})
+    assert read(bundle, "error.txt") == "R2 #2|2|3|Loop Flow > Each Request > Fail On Honda"
+
+
+def test_a_skipped_step_does_not_evaluate_its_parameters(tmp_path):
+    # #145: parameters were evaluated before the condition, so the condition could not guard them
+    md = """# Guarded Flow
+> Requires: kinenix>=0.3.0b1
+
+## Variables
+- `total`: ""
+
+## Steps
+
+### 1. Add One When Known (`logic.set_variable`)
+- **condition:** `${total} is not empty`
+- **name:** `next_total`
+- **value:** `${total + 1}`
+"""
+    ctx, _ = run(tmp_path, md)
+    assert not ctx.has_error
+    assert [r.status for r in ctx.step_results] == ["skipped"]
+
+
 def test_a_subflow_failure_reaches_the_caller_with_the_inner_step_and_path(tmp_path):
     bundle = tmp_path / "bundle"
     (bundle / "subflows").mkdir(parents=True)

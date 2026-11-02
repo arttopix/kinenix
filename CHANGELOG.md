@@ -2,6 +2,16 @@
 
 `kinenix`, `kinenix-hub`, and `kinenix-worker` are released together with one version. How to release: [docs/releasing.md](docs/releasing.md).
 
+## Unreleased
+
+Fixes found while testing 1.0.0rc1.
+
+### Fixed
+
+- A loop whose `item_label` calculates with the loop variable, such as `${row_index + 1}`, stopped the run before its first item; a step whose `condition` was false still evaluated its parameters, so the condition could not guard an expression such as `${total + 1}` (#145).
+- Logs were written to `logs/` of the folder a command was started from when the flow was not in a git repository, so `kinenix run demo` from the home folder left `~/logs` behind. They now go to the flow's project folder (or the git repository that holds it), for `kinenix run` and `kinenix-worker`; a `--sandbox` run logs next to the original bundle.
+- A constant in `connect.py` that holds the name of the key setting was taken for a secret by CodeQL; renamed.
+
 ## 1.0.0rc1 (2026-11-02)
 
 The stable core: what stays the same for all of 1.x is written down in [docs/compatibility.md](docs/compatibility.md), commands end with exit codes that say what happened, and the code went through a threat model, a security review, and security checks in CI. Flows written for 0.5.0b1 run unchanged.

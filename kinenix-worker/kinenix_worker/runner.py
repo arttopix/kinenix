@@ -69,6 +69,8 @@ class WorkerRunner:
 
         flow_dir = target_path.parent
         work_dir = flow_dir
+        # Logs stay with the original bundle, also when the run uses a --sandbox copy
+        original_path = target_path
         job_id = f"job_{time.strftime('%Y%m%d_%H%M%S')}_{uuid.uuid4().hex[:6]}"
 
         if use_sandbox:
@@ -109,7 +111,7 @@ class WorkerRunner:
         flow_def.variables.setdefault("worker_id", self.client.worker_id)
 
         actual_log_dir = Path(log_dir) if log_dir else None
-        exec_logger = ExecutionLogger(log_dir=actual_log_dir)
+        exec_logger = ExecutionLogger(log_dir=actual_log_dir, flow_path=original_path)
 
         interpreter = FlowInterpreter(logger=exec_logger)
 

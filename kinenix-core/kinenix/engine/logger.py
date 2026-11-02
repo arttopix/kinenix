@@ -15,9 +15,9 @@ from .redaction import Redactor
 
 def resolve_log_dir(log_dir: Optional[Union[str, Path]] = None, flow_path: Optional[Path] = None) -> Path:
     """
-    Smart Log Directory Resolver:
-    Locates the project root (containing .git or kinenix-core) so logs are always saved to
-    the root 'logs/' directory, regardless of whether called from kinenix-core or another subfolder.
+    Where run logs go: `log_dir` or KINENIX_LOG_DIR when set; else `logs/` at the root of the git repository
+    (or Kinenix checkout) that holds the flow, else `logs/` in the flow's own folder. Without a flow, the same
+    search starts from the current folder, so `kinenix run demo` from the home folder does not write ~/logs.
     """
     if log_dir and str(log_dir).strip() not in ["", "logs"]:
         return Path(log_dir).resolve()
@@ -25,21 +25,13 @@ def resolve_log_dir(log_dir: Optional[Union[str, Path]] = None, flow_path: Optio
     if os.getenv("KINENIX_LOG_DIR"):
         return Path(os.environ["KINENIX_LOG_DIR"]).resolve()
 
-    # 1. Search upwards from Current Working Directory
-    curr = Path.cwd().resolve()
-    for p in [curr] + list(curr.parents):
+    start = Path(flow_path).resolve() if flow_path else Path.cwd().resolve()
+    if flow_path and not start.is_dir():
+        start = start.parent
+    for p in [start] + list(start.parents):
         if (p / ".git").exists() or (p / "kinenix-core").is_dir():
             return p / "logs"
-
-    # 2. Search upwards from flow file if provided
-    if flow_path:
-        f_resolved = Path(flow_path).resolve()
-        for p in list(f_resolved.parents):
-            if (p / ".git").exists() or (p / "kinenix-core").is_dir():
-                return p / "logs"
-
-    # 3. Fallback to CWD/logs
-    return (Path.cwd() / "logs").resolve()
+    return start / "logs"
 
 
 def _in_section(section: str) -> str:

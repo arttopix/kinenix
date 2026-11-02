@@ -47,7 +47,7 @@ Malee,"Hello, Malee!"
 Alex,"Hello, Alex!"
 ```
 
-A JSON log of every step is saved under `logs/` (in the nearest git repository, otherwise in the folder you ran the command from; set `KINENIX_LOG_DIR` or `--log-dir` to choose).
+A JSON log of every step is saved under `logs/` in the project folder (or at the root of the git repository that holds it), wherever you run the command from. Set `KINENIX_LOG_DIR` or `--log-dir` to choose another folder.
 
 ## 4. Change it (2 minutes)
 
