@@ -1,7 +1,7 @@
 name: Website
 
 # Rebuilds www.kinenix.com when the documentation on main changes.
-# The site lives in arttopix/kinenix-web (MkDocs on Cloudflare Pages); each of its builds copies docs/ from
+# The site lives in kinenix/kinenix-web (MkDocs on Cloudflare Pages); each of its builds copies docs/ from
 # main of this repository (sync_docs.py). This workflow only asks Cloudflare Pages to build again, through
 # a deploy hook, so no token with access to another repository is needed. See docs/releasing.md, section 5.
 

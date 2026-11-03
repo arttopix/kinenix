@@ -20,7 +20,7 @@ def test_llms_txt_follows_the_format():
 def test_every_link_points_to_a_page_or_file_that_exists():
     for url in _links():
         site = re.fullmatch(r"https://www\.kinenix\.com/([\w/]+)/", url)
-        github = re.fullmatch(r"https://github\.com/arttopix/kinenix/(?:blob|tree)/main/(.+)", url)
+        github = re.fullmatch(r"https://github\.com/kinenix/kinenix/(?:blob|tree)/main/(.+)", url)
         assert site or github, f"{url}: link to www.kinenix.com pages or files of this repository"
         path = DOCS / f"{site.group(1)}.md" if site else REPO / github.group(1)
         assert path.exists(), f"{url}: {path} does not exist"

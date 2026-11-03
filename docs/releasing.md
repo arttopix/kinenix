@@ -30,7 +30,7 @@ Use these values:
 
 | Field | Value |
 | :--- | :--- |
-| Owner | `arttopix` |
+| Owner | `kinenix` (the GitHub organization) |
 | Repository name | `kinenix` |
 | Workflow name | `release.yml` |
 | Environment name | `pypi` for `kinenix`, **`pypi-hub`** for `kinenix-hub`, **`pypi-worker`** for `kinenix-worker` |
@@ -115,7 +115,7 @@ Each release's changes and upgrade notes are in [CHANGELOG.md](../CHANGELOG.md).
 
 ## 5. The website (www.kinenix.com)
 
-The website is a separate repository, [arttopix/kinenix-web](https://github.com/arttopix/kinenix-web): MkDocs, built and hosted by Cloudflare Pages. Every build copies `docs/` from `main` of this repository, so the site shows the documentation of the latest release, not of `dev`.
+The website is a separate repository, [kinenix/kinenix-web](https://github.com/kinenix/kinenix-web): MkDocs, built and hosted by Cloudflare Pages. Every build copies `docs/` from `main` of this repository, so the site shows the documentation of the latest release, not of `dev`.
 
 When a release pull request changes `docs/`, `README.md`, or `CHANGELOG.md` on `main`, the **Website** workflow ([`.github/workflows/website.yml`](../.github/workflows/website.yml)) asks Cloudflare Pages to build the site again. It can also be run by hand from **Actions**, then **Website**, then **Run workflow**.
 

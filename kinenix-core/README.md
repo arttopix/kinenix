@@ -2,7 +2,7 @@
 
 Core execution engine and `kinenix` CLI for **Kinenix**, an open-source, local AI-native RPA framework in Python.
 
-> **Status: release candidate for 1.0.0.** From 1.0.0, flows, commands, exit codes, and logs stay compatible for all of 1.x ([compatibility](https://github.com/arttopix/kinenix/blob/main/docs/compatibility.md)).
+> **Status: release candidate for 1.0.0.** From 1.0.0, flows, commands, exit codes, and logs stay compatible for all of 1.x ([compatibility](https://github.com/kinenix/kinenix/blob/main/docs/compatibility.md)).
 
 - Runs automation flows written as `flow.md`
 - Built-in actions for web automation (Playwright), Excel and CSV (no Microsoft Office required), files, HTTP, email, and flow control
@@ -41,10 +41,10 @@ Kinenix Studio (visual flow editor) lives in the same repository and is not yet 
 
 ## Documentation
 
-- [Project README](https://github.com/arttopix/kinenix#readme)
-- [Actions reference](https://github.com/arttopix/kinenix/blob/main/docs/actions_reference.md)
-- [Flow Markdown specification](https://github.com/arttopix/kinenix/blob/main/docs/flow_markdown_spec.md)
-- [CLI guide](https://github.com/arttopix/kinenix/blob/main/docs/cli_guide.md)
+- [Project README](https://github.com/kinenix/kinenix#readme)
+- [Actions reference](https://github.com/kinenix/kinenix/blob/main/docs/actions_reference.md)
+- [Flow Markdown specification](https://github.com/kinenix/kinenix/blob/main/docs/flow_markdown_spec.md)
+- [CLI guide](https://github.com/kinenix/kinenix/blob/main/docs/cli_guide.md)
 
 ## License
 

@@ -1,6 +1,6 @@
 # Design: Expressions in `${...}` (0.3.0b1)
 
-Status: **approved** (2026-10-16). Milestone: [0.3.0b1: Expressions](https://github.com/arttopix/kinenix/milestone/3). Issue: #56. Checklist: #86.
+Status: **approved** (2026-10-16). Milestone: [0.3.0b1: Expressions](https://github.com/kinenix/kinenix/milestone/3). Issue: #56. Checklist: #86.
 
 ## 1. Goal
 
