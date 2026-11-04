@@ -12,6 +12,8 @@ from kinenix.engine.logger import ExecutionLogger
 from kinenix.engine.markdown import markdown_to_flow
 
 STEP = "### 1. Wait (`logic.delay`)\n- **seconds:** 0\n"
+LOOP = ("### 1. Each (`logic.loop`)\n- **items:** [1, 2]\n- **item_var:** `n`\n- **item_label:** ${{n}}\n- **Sub-steps:**\n"
+        "  - Read (`file.read_text`):\n    - **path:** ./missing.txt\n    - **on_error:** {on_error}\n")
 
 
 def _flow(steps, requires=""):
@@ -45,8 +47,9 @@ def _run_context(text):
     (STEP, "> Requires: kinenix>=99.0\n", exit_codes.NEWER_KINENIX),
     # A failure in Finally after successful steps is technical, whatever stopped it
     (STEP + "\n## Finally\n\n### 2. Stop (`flow.fail`)\n- **message:** x\n", "", exit_codes.TECHNICAL),
-    # Failures the flow handles itself end the run with 0: the run did not stop
-    ("### 1. Read (`file.read_text`)\n- **path:** ./missing.txt\n- **on_error:** continue\n", "", exit_codes.OK),
+    # Failures the flow handles itself do not stop the run, but not everything worked (#172)
+    ("### 1. Read (`file.read_text`)\n- **path:** ./missing.txt\n- **on_error:** continue\n", "", exit_codes.PARTIAL),
+    (LOOP.format(on_error="next_item"), "", exit_codes.PARTIAL),
 ])
 def test_a_run_ends_with_the_code_of_its_failure(steps, requires, code):
     assert exit_codes.for_run(_run_context(_flow(steps, requires))) == code
@@ -95,3 +98,18 @@ def test_connect_to_a_hub_that_does_not_answer_is_unreachable(tmp_path):
     assert result.returncode == exit_codes.UNREACHABLE, result.stdout
     bad = connect("ftp://hub")  # not an http(s) address
     assert bad.returncode == exit_codes.USAGE, bad.stdout
+
+
+def test_a_partial_run_says_so_and_its_log_is_named_partial(tmp_path):
+    _bundle(tmp_path, "some", _flow(LOOP.format(on_error="next_item")))
+    result = _cli(tmp_path, "run", "some", "--log-dir", str(tmp_path / "logs"))
+    assert result.returncode == exit_codes.PARTIAL, result.stderr
+    assert "Result: PARTIAL, finished with 2 of 2 items failed" in result.stdout + result.stderr
+    assert list((tmp_path / "logs").rglob("*_partial.json"))
+    assert not list((tmp_path / "logs").rglob("*_success.json"))
+
+
+def test_a_run_that_stopped_is_not_partial():
+    context = _run_context(_flow(LOOP.format(on_error="fail")))
+    assert context.has_error and not context.is_partial
+    assert exit_codes.for_run(context) == exit_codes.TECHNICAL

@@ -2,6 +2,13 @@
 
 `kinenix`, `kinenix-hub`, and `kinenix-worker` are released together with one version. How to release: [docs/releasing.md](docs/releasing.md).
 
+## Unreleased
+
+### Changed
+
+- **Exit code 8 for partial runs (#172):** a run that finishes with failed items or steps (`on_error: continue` or `next_item`) now ends with 8 instead of 0, so a scheduler, a CI job, or an AI agent can tell it from a run where everything worked, also without a Hub. A script that treats every code other than 0 as a failure now stops on these runs; check for 8 if failed items are expected.
+- `kinenix-worker run` shows these runs as `PARTIAL`, the console summary has a `Result: PARTIAL` line, and their log file ends with `_partial.json` instead of `_success.json`.
+
 ## 1.0.0rc2 (2026-11-02)
 
 Fixes found while testing 1.0.0rc1, which was published only on TestPyPI. Upgrading from 0.5.0b1: read the notes of 1.0.0rc1 below; they apply to 1.0.0rc2.

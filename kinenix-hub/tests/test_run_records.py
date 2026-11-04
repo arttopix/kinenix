@@ -266,3 +266,20 @@ def test_partial_text_says_what_failed_in_plain_words():
     assert partial_text({"items_total": 2, "items_failed": 1, "failure_count": 3}) == "1 of 2 items failed"
     assert partial_text({"failure_count": 2}) == "2 step(s) failed and the run went on"
     assert partial_text(None) == "some steps failed and the run went on"
+
+
+@pytest.mark.parametrize("steps, status, code", [
+    ("### 1. Wait (`logic.delay`)\n- **seconds:** 0\n", "success", 0),
+    ("### 1. Read (`file.read_text`)\n- **path:** ./missing.txt\n- **on_error:** continue\n", "partial", 8),
+    ("### 1. Read (`file.read_text`)\n- **path:** ./missing.txt\n", "failed", 1),
+])
+def test_the_exit_code_and_the_hub_agree_on_a_run(steps, status, code):
+    from kinenix import exit_codes
+    from kinenix.engine.interpreter import FlowInterpreter
+    from kinenix.engine.logger import ExecutionLogger
+    from kinenix.engine.markdown import markdown_to_flow
+    from kinenix_hub.services.run_records import run_status
+
+    context = FlowInterpreter(logger=ExecutionLogger(log_dir=None)).run_flow(markdown_to_flow(f"# Run\n\n## Steps\n\n{steps}"))
+    assert run_status(context.model_dump(mode="json")) == status
+    assert exit_codes.for_run(context) == code

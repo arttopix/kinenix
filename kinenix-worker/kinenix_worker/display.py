@@ -60,7 +60,8 @@ def print_info(console: Console, info: Dict[str, Any], client: HubClient) -> Non
 
 def print_run_result(console: Console, res: Dict[str, Any]) -> None:
     failed = res["has_error"]
-    status = Text(res["status"].upper(), style="bold red" if failed else "bold green")
+    color = "red" if failed else "dark_orange" if res["status"] == "partial" else "green"
+    status = Text(res["status"].upper(), style=f"bold {color}")
 
     grid = _key_value_grid()
     grid.add_row("Status", status)
@@ -74,6 +75,6 @@ def print_run_result(console: Console, res: Dict[str, Any]) -> None:
     console.print(Panel(
         grid,
         title="[bold]Execution Result[/]",
-        border_style="red" if failed else "green",
+        border_style=color,
         expand=False,
     ))
