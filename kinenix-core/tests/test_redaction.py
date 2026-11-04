@@ -211,3 +211,80 @@ def test_the_shell_working_directory_is_not_a_secret():
             "pwd": "abc12345"}
     assert redactor.redact(data) == {"log_path": "/home/somchai/kinenix/logs/run.jsonl",
                                      "error": "login with **** failed", "pwd": "****"}
+
+
+def _run_bundle(tmp_path, env_text, flow_text):
+    bundle = tmp_path / "bundle"
+    bundle.mkdir()
+    (bundle / ".env").write_text(env_text, encoding="utf-8")
+    names = [line.split("=")[0] for line in env_text.splitlines()]
+    try:
+        with patch("requests.post") as mock_post:
+            mock_post.return_value = MagicMock(status_code=200)
+            FlowInterpreter(logger=ExecutionLogger(log_dir=tmp_path / "logs")).run_flow(
+                markdown_to_flow(flow_text), initial_vars={"__flow_dir__": str(bundle), "hub_url": "http://hub.test"})
+    finally:
+        for name in names:
+            os.environ.pop(name, None)
+    return json.dumps(mock_post.call_args.kwargs["json"]), _log_file(tmp_path / "logs")
+
+
+def test_env_file_values_that_look_harmless_stay_readable(tmp_path):
+    sent, written = _run_bundle(tmp_path, "KX_REGION=sales\nKX_DEBUG=true\n", """# sales report
+
+## Variables
+- `note`: wholesales are true
+
+## Steps
+
+### 1. Wait (`logic.delay`)
+- **seconds:** 0
+""")
+    for text in (sent, written):
+        assert "sales report" in text and "wholesales are true" in text and "****" not in text
+
+
+def test_env_file_values_with_a_secret_name_are_hidden_even_if_the_flow_does_not_read_them(tmp_path):
+    env = "KX_DB_PASS=hunter-one\nKX_ACCESS_KEY=hunter-two\nKX_SITE_PASSWORD=hunter-three\n"
+    sent, written = _run_bundle(tmp_path, env, """# Names
+
+## Variables
+- `note`: hunter-one hunter-two hunter-three
+
+## Steps
+
+### 1. Wait (`logic.delay`)
+- **seconds:** 0
+""")
+    for text in (sent, written):
+        assert "hunter-" not in text
+
+
+def test_env_file_values_a_flow_reads_are_hidden_however_it_reads_them(tmp_path):
+    sent, written = _run_bundle(tmp_path, "KX_PLAIN_LOGIN=loginvalue\nKX_OTHER_LOGIN=othervalue\n", """# Reads
+
+## Steps
+
+### 1. Direct (`logic.set_variable`)
+- **name:** a
+- **value:** ${env.KX_PLAIN_LOGIN}
+
+### 2. In an expression (`logic.set_variable`)
+- **name:** b
+- **value:** ${upper(env.KX_OTHER_LOGIN)} othervalue
+""")
+    for text in (sent, written):
+        assert "loginvalue" not in text and "othervalue" not in text
+
+
+def test_a_value_read_by_the_flow_does_not_change_the_flow_name(tmp_path):
+    sent, written = _run_bundle(tmp_path, "KX_REGION=sales\n", """# sales report
+
+## Steps
+
+### 1. Read (`logic.set_variable`)
+- **name:** region
+- **value:** ${env.KX_REGION}
+""")
+    for text in (sent, written):
+        assert "sales report" in text

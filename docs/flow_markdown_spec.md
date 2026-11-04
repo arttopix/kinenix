@@ -101,7 +101,7 @@ All parameters passed to the action must be written as Markdown bullet items dir
 - **Number:** `- **timeout:** 5000` or `- **delay:** 1.5`. A value with a leading zero, such as `- **branch:** 0012`, stays text, so codes keep their zeros. To make any value text, quote it: `"120"`
 - **List or object (JSON):** `- **columns:** ["Date", "Rate"]` or `- **item:** {"net": "${number(inv.amount)}"}`. Put quotes around `${...}` inside JSON; a value written as `{...}` or `[...]` that is not valid JSON is read as text, and `kinenix validate` reports it
 - **Dynamic Variable Expression:** `- **url:** ${config.website}`
-- **Output Variable:** `- **output_var:** my_result` (stores action result in context)
+- **Output Variable:** `- **output_var:** my_result` (stores action result in context). An action that returns nothing and a step that fails leave it empty, so a loop never reuses the previous item's value; a step skipped by its `condition` leaves it as it was
 - **Error Handling:** `- **on_error:** continue`, `- **max_retries:** 2`, `- **retry_interval:** 3.0`, `- **fallback_step_id:** step_9` (deprecated). These four keys are compiled into the step's `error_handler`, not into the action parameters (see [Step Resilience & Error Handling](actions_reference.md#step-resilience--error-handling-error_handler)).
 
 #### Example
