@@ -1,5 +1,6 @@
 import logging
-from typing import Any, Dict, Optional
+import math
+from typing import Any, Dict, Optional, Tuple
 import requests
 
 from ..config import CENTRAL_LLM_URL
@@ -65,7 +66,7 @@ def _rule_category(text: str) -> Optional[str]:
     return None
 
 
-def _llm_category(error_text: str, step: str) -> Optional[tuple]:
+def _llm_category(error_text: str, step: str) -> Optional[Tuple[str, float]]:
     """(category, confidence) from the central LLM, or None when it is unavailable or answers outside the list."""
     try:
         payload = {
@@ -78,8 +79,17 @@ def _llm_category(error_text: str, step: str) -> Optional[tuple]:
     except Exception as e:
         logger.warning(f"Central OpenThai server call failed, using rule-based triage: {e}")
         return None
-    if isinstance(data, dict) and data.get("choice") in CATEGORIES:
-        return data["choice"], float(data.get("score", 0.92))
+    choice = data.get("choice") if isinstance(data, dict) else None
+    if isinstance(choice, str) and choice in CATEGORIES:
+        score = data.get("score")
+        if score is None or isinstance(score, bool):
+            return None
+        try:
+            confidence = float(score)
+        except (TypeError, ValueError, OverflowError):
+            return None
+        if math.isfinite(confidence) and 0.0 <= confidence <= 1.0:
+            return choice, confidence
     return None
 
 

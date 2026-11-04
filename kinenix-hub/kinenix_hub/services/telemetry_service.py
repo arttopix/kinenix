@@ -1,6 +1,7 @@
 import datetime
 import json
 import logging
+import math
 from typing import Any, Dict, List, Optional
 from sqlalchemy.orm import Session
 
@@ -66,20 +67,40 @@ def step_summaries(raw_log: Optional[str]) -> List[Dict[str, Any]]:
     return [_step_summary(step) for step in steps if isinstance(step, dict)]
 
 
+def _duration_seconds(value: Any) -> float:
+    try:
+        seconds = float(value)
+    except (TypeError, ValueError, OverflowError):
+        logger.warning("Invalid total_duration_seconds in telemetry; storing 0.0")
+        return 0.0
+    if not math.isfinite(seconds) or seconds < 0.0:
+        logger.warning("Invalid total_duration_seconds in telemetry; storing 0.0")
+        return 0.0
+    return seconds
+
+
 def ingest_execution_log(db: Session, payload: Dict[str, Any], worker_id: str = "local-worker") -> Execution:
     flow_name = payload.get("flow_name", "Unknown Flow")
     has_error = bool(payload.get("has_error", False))
     failure_details = payload.get("failure_details") or {}
-    metrics = payload.get("metrics") or {}
+    raw_metrics = payload.get("metrics")
+    metrics = raw_metrics if isinstance(raw_metrics, dict) else {}
 
     start_time_str = payload.get("start_time")
     end_time_str = payload.get("end_time")
 
-    duration = float(metrics.get("total_duration_seconds", 0.0))
+    duration = _duration_seconds(metrics.get("total_duration_seconds", 0.0))
 
     # Execution logs from kinenix-core carry start_time and a duration but no end_time
     start_time = parse_timestamp(start_time_str) or utc_now()
-    end_time = parse_timestamp(end_time_str) or (start_time + datetime.timedelta(seconds=duration))
+    end_time = parse_timestamp(end_time_str)
+    if end_time is None:
+        try:
+            end_time = start_time + datetime.timedelta(seconds=duration)
+        except OverflowError:
+            logger.warning("total_duration_seconds exceeds the supported timestamp range; storing 0.0")
+            duration = 0.0
+            end_time = start_time
 
     execution = Execution(
         worker_id=worker_id,
