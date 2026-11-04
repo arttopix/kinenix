@@ -597,7 +597,8 @@ class FlowInterpreter:
             action_cls = ActionRegistry.get(step.action)
             action_instance = action_cls()
             output = action_instance.execute(evaluated_params, context)
-            if step.output_var and output is not None:
+            if step.output_var:
+                # Also when the action returned nothing: a loop must not keep the previous item's value (#159)
                 context.set_variable(step.output_var, output)
             return output
 
@@ -643,6 +644,9 @@ class FlowInterpreter:
                     time.sleep(retry_interval)
                 else:
                     break
+
+        if step.output_var:
+            context.set_variable(step.output_var, None)  # A failed step has no result, not an earlier one (#159)
 
         end_time = local_now()
         duration = (end_time - start_time).total_seconds()
@@ -929,10 +933,8 @@ class FlowInterpreter:
             v = v.strip().strip("'\"")
             if k and k not in os.environ:
                 os.environ[k] = v
-            # Values from .env are secrets unless they are known Kinenix settings
-            if k and k not in NOT_SECRET_ENV:
-                self.logger.redactor.add_secret(v)
-                self.logger.redactor.add_secret(os.environ.get(k))
+            if k:
+                self.logger.redactor.add_env_file_value(k, v)
 
     def _resolve_subflow_path(self, flow_target: str, context: ExecutionContext) -> Path:
         return resolve_subflow_path(flow_target, context)

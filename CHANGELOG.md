@@ -9,6 +9,11 @@
 - **Exit code 8 for partial runs (#172):** a run that finishes with failed items or steps (`on_error: continue` or `next_item`) now ends with 8 instead of 0, so a scheduler, a CI job, or an AI agent can tell it from a run where everything worked, also without a Hub. A script that treats every code other than 0 as a failure now stops on these runs; check for 8 if failed items are expected.
 - `kinenix-worker run` shows these runs as `PARTIAL`, the console summary has a `Result: PARTIAL` line, and their log file ends with `_partial.json` instead of `_success.json`.
 
+### Fixed
+
+- `output_var` kept the previous loop item's value when an action returned nothing or a step failed with `on_error: continue` or `next_item`, so the next steps used the wrong item's data without an error (#159). It is now empty; a step skipped by its `condition` still leaves it as it was.
+- Every value in a bundle's `.env` was hidden in logs and on the Hub, so `REGION=sales` turned a flow named `sales report` into `**** report` and broke `--flow` filters (#170). A `.env` value is now hidden when its name looks secret or the flow reads it, and `flow_name` is never changed. Values read inside expressions, such as `${upper(env.NAME)}`, are now found too.
+
 ## 1.0.0rc2 (2026-11-02)
 
 Fixes found while testing 1.0.0rc1, which was published only on TestPyPI. Upgrading from 0.5.0b1: read the notes of 1.0.0rc1 below; they apply to 1.0.0rc2.
