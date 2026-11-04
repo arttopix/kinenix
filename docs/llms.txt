@@ -35,4 +35,4 @@ Expressions in `${...}` are a fixed, safe set of functions (no code runs). Busin
 
 - [Architecture](https://www.kinenix.com/architecture/): modules and design principles
 - [Roadmap](https://www.kinenix.com/roadmap/): what is built, what is planned, and the release milestones
-- [Changelog](https://github.com/arttopix/kinenix/blob/main/CHANGELOG.md): changes and upgrade notes of each release
+- [Changelog](https://github.com/kinenix/kinenix/blob/main/CHANGELOG.md): changes and upgrade notes of each release

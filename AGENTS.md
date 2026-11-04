@@ -62,7 +62,7 @@ CLI output in `kinenix-worker` and `kinenix hub` is rendered with `rich` (`kinen
 
 Run the test suites for every module you touch before reporting work as done. GitHub Actions (`.github/workflows/ci.yml`) runs the same commands on every push and pull request to `main` and `dev`, and weekly; `codeql.yml` adds code scanning; keep the workflow in sync when these commands change.
 
-The website www.kinenix.com is a separate repository (`arttopix/kinenix-web`, MkDocs on Cloudflare Pages) that copies `docs/` from `main` at every build; `.github/workflows/website.yml` asks it to rebuild when `docs/` changes on `main` (`docs/releasing.md`, section 5). Write documentation here, in `docs/`; do not edit the copies in kinenix-web.
+The website www.kinenix.com is a separate repository (`kinenix/kinenix-web`, MkDocs on Cloudflare Pages) that copies `docs/` from `main` at every build; `.github/workflows/website.yml` asks it to rebuild when `docs/` changes on `main` (`docs/releasing.md`, section 5). Write documentation here, in `docs/`; do not edit the copies in kinenix-web.
 
 A flow is one `flow.md` file; there is no `flow.json` (the runner and the worker read `flow.md` directly, `kinenix compile` prints the compiled form, and `kinenix export-md` converts old JSON flows). Do not create `flow.json` files.
 
