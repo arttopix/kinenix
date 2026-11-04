@@ -280,7 +280,7 @@ Any step can retry and then decide what happens:
 - **on_error:** continue
 ```
 
-`max_retries` always retries first (2 more attempts above). After the last attempt, `on_error` decides:
+`max_retries` always retries first (2 more attempts above). Only the last attempt counts in the run's record, also for a `flow.call`: a step that succeeds on a retry is not a failure, and the step's `retries` says how many it took. After the last attempt, `on_error` decides:
 
 | `on_error` | After the last attempt |
 | :--- | :--- |

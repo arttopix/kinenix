@@ -12,6 +12,7 @@
 ### Fixed
 
 - `output_var` kept the previous loop item's value when an action returned nothing or a step failed with `on_error: continue` or `next_item`, so the next steps used the wrong item's data without an error (#159). It is now empty; a step skipped by its `condition` still leaves it as it was.
+- A `flow.call` that succeeded on a retry was counted as a failed item and failed steps, so the run showed as partial (#167). Only the last attempt now counts, as for any other step, and the step's `retries` says how many it took.
 - Every value in a bundle's `.env` was hidden in logs and on the Hub, so `REGION=sales` turned a flow named `sales report` into `**** report` and broke `--flow` filters (#170). A `.env` value is now hidden when its name looks secret or the flow reads it, and `flow_name` is never changed. Values read inside expressions, such as `${upper(env.NAME)}`, are now found too.
 
 ## 1.0.0rc2 (2026-11-02)

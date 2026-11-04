@@ -592,7 +592,7 @@ class FlowInterpreter:
 
         def _invoke_step_action() -> Any:
             if step.action == "flow.call":
-                self._handle_flow_call_step(step, evaluated_params, context, start_time)
+                self._handle_flow_call_step(step, evaluated_params, context, start_time, retries=attempt)
                 return None
             action_cls = ActionRegistry.get(step.action)
             action_instance = action_cls()
@@ -610,6 +610,8 @@ class FlowInterpreter:
 
         attempt = 0
         last_error = None
+        results_before = len(context.step_results)
+        failures_before = self._failure_count(context)
         while attempt <= max_retries:
             try:
                 output = _invoke_step_action()
@@ -635,6 +637,9 @@ class FlowInterpreter:
                 last_error = e
                 # Business errors (bad data, a rule not met) fail the same way on every attempt
                 if attempt < max_retries and not is_business_error(e):
+                    # Only the last attempt counts, as for any step: a subflow already added this one's steps (#167)
+                    del context.step_results[results_before:]
+                    context.set_variable("__failures__", failures_before)
                     attempt += 1
                     self.logger.logger.warning(
                         f"Step '{step.id}' ({step.name}) failed attempt {attempt}/{max_retries + 1}: "
@@ -939,7 +944,8 @@ class FlowInterpreter:
     def _resolve_subflow_path(self, flow_target: str, context: ExecutionContext) -> Path:
         return resolve_subflow_path(flow_target, context)
 
-    def _handle_flow_call_step(self, step: Step, evaluated_params: Dict[str, Any], context: ExecutionContext, start_time: datetime) -> None:
+    def _handle_flow_call_step(self, step: Step, evaluated_params: Dict[str, Any], context: ExecutionContext,
+                               start_time: datetime, retries: int = 0) -> None:
         flow_target = evaluated_params.get("flow")
         if not flow_target:
             raise ValueError(f"Step '{step.id}' (flow.call) requires 'flow' parameter specifying path to target flow JSON")
@@ -1074,6 +1080,7 @@ class FlowInterpreter:
             start_time=start_time,
             end_time=end_time,
             duration_seconds=duration,
+            retries=retries,
             output={
                 "subflow_name": subflow_def.name,
                 "subflow_path": str(resolved_path),
