@@ -7,7 +7,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from .conditions import parse_boolean, resolve_condition
+from .conditions import (ConditionError, compare_order, grouping_problem, is_order_operator, parse_boolean,
+                         resolve_condition, values_equal)
 from .evaluator import VariableEvaluator
 from .logger import ExecutionLogger
 from .markdown import JSON_FLOW_NOT_RUN, SECTION_HEADINGS, markdown_to_flow
@@ -1118,34 +1119,16 @@ class FlowInterpreter:
         if op in ["is_not_empty", "not_empty"]:
             return left is not None and str(left).strip() != ""
 
-        if op in ["greater_than", ">", "gt"]:
-            try:
-                return float(left) > float(right)
-            except (ValueError, TypeError):
-                return False
-        if op in ["greater_than_or_equal", ">=", "gte"]:
-            try:
-                return float(left) >= float(right)
-            except (ValueError, TypeError):
-                return False
-        if op in ["less_than", "<", "lt"]:
-            try:
-                return float(left) < float(right)
-            except (ValueError, TypeError):
-                return False
-        if op in ["less_than_or_equal", "<=", "lte"]:
-            try:
-                return float(left) <= float(right)
-            except (ValueError, TypeError):
-                return False
+        if is_order_operator(op):
+            return compare_order(left, op, right)
 
         s_left = "" if left is None else str(left).strip()
         s_right = "" if right is None else str(right).strip()
 
         if op in ["equals", "==", "eq"]:
-            return s_left.lower() == s_right.lower()
+            return values_equal(left, right)
         if op in ["not_equals", "!=", "neq"]:
-            return s_left.lower() != s_right.lower()
+            return not values_equal(left, right)
         # `left in right` means left is part of right; a list on the other side is checked item by item
         if op in ["in", "not_in"]:
             if isinstance(right, (list, tuple, set)):
@@ -1176,6 +1159,9 @@ class FlowInterpreter:
         text = str(expression).strip()
         if len(text) >= 2 and text.startswith("`") and text.endswith("`"):
             text = text[1:-1].strip()
+        problem = grouping_problem(text)
+        if problem:
+            raise ConditionError(problem, text)
         return self._boolean_holds(parse_boolean(text), variables)
 
     def _boolean_holds(self, tree: Any, variables: Dict[str, Any]) -> bool:
@@ -1192,7 +1178,10 @@ class FlowInterpreter:
         left, operator, right = resolve_condition(expression, variables)
         if operator is None:
             return left if isinstance(left, bool) else str(left).strip().lower() in ["true", "1", "yes"]
-        return self._evaluate_condition(left, operator, right)
+        try:
+            return self._evaluate_condition(left, operator, right)
+        except ConditionError as e:
+            raise ConditionError(e.reason, expression) from None
 
     def _evaluate_condition_expr(self, expr: Any) -> bool:
         """A condition whose variables are already replaced; kept for callers outside the interpreter."""
