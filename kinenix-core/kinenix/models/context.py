@@ -68,6 +68,16 @@ class ExecutionContext(BaseModel):
     has_error: bool = Field(default=False, description="Whether an unhandled error occurred during execution")
     failure_details: Optional[FailureDetails] = Field(default=None, description="Structured root-cause diagnosis if has_error is true")
 
+    @property
+    def is_partial(self) -> bool:
+        """
+        The run finished, but work items or steps failed on the way (handled by on_error: continue or next_item).
+        Same rule as run_status in kinenix-hub (services/run_records.py), so the exit code and the Hub agree.
+        """
+        if self.has_error:
+            return False
+        return (self.items or {}).get("failed", 0) > 0 or any(r.status == "failed" for r in self.step_results)
+
     def set_variable(self, name: str, value: Any) -> None:
         self.variables[name] = value
 

@@ -127,6 +127,10 @@ class ExecutionLogger:
         if context.has_error and details:
             self.logger.info(f"Result: FAILED at step [{details.failed_step_id}] '{details.failed_step_name}'"
                              f"{_in_section(details.section)}")
+        elif context.is_partial:
+            items = context.items or {}
+            failed = f"{items['failed']} of {items.get('total', 0)} items" if items.get("failed") else f"{m.failed_steps} steps"
+            self.logger.info(f"Result: PARTIAL, finished with {failed} failed")
 
         raw_data = context.model_dump(mode="python")
         raw_data = {"$schema": "../../../schemas/execution_log.schema.json", **raw_data}
@@ -143,7 +147,7 @@ class ExecutionLogger:
         if self.log_dir:
             try:
                 time_str = context.start_time.strftime("%H%M%S")
-                status_str = "failed" if context.has_error else "success"
+                status_str = "failed" if context.has_error else "partial" if context.is_partial else "success"
 
                 target_dir = self._run_dir(context)
                 target_dir.mkdir(parents=True, exist_ok=True)

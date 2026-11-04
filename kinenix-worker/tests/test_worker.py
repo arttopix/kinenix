@@ -56,6 +56,15 @@ def test_worker_result_carries_the_exit_code_and_run_id(tmp_path: Path):
     assert result["run_id"] and any(result["run_id"] in p.name for p in (tmp_path / "logs").rglob("*.json*"))
 
 
+def test_worker_reports_a_run_with_handled_failures_as_partial(tmp_path: Path):
+    flow_file = tmp_path / "flow.md"
+    flow_file.write_text("# Some\n\n## Steps\n\n### 1. Read (`file.read_text`)\n- **path:** ./missing.txt\n"
+                         "- **on_error:** continue\n", encoding="utf-8")
+    result = WorkerRunner().execute_flow(str(flow_file), log_dir=str(tmp_path / "logs"))
+    assert result["status"] == "partial" and result["has_error"] is False
+    assert result["exit_code"] == exit_codes.PARTIAL
+
+
 def test_worker_run_finishes_when_the_hub_is_down(tmp_path: Path):
     """Failure injection (1.0.0): heartbeats and telemetry fail, the run still completes and keeps its log."""
     import os

@@ -47,6 +47,11 @@ def test_print_run_result_success_and_failure():
     assert "SUCCESS" in out and "3/3" in out and "Error" not in out
 
     console = _console()
+    display.print_run_result(console, {**res, "status": "partial"})
+    out = console.export_text()
+    assert "PARTIAL" in out and "Error" not in out
+
+    console = _console()
     display.print_run_result(console, {**res, "status": "failed", "has_error": True, "steps_executed": 2,
                                        "error": "Step 'Open' (Timeout): page did not load"})
     out = console.export_text()
