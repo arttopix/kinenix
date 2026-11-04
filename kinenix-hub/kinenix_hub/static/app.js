@@ -148,7 +148,7 @@ function renderExecutions(executions) {
         </button></div>`
       : stepsButton;
 
-    const timeFormatted = e.start_time ? new Date(e.start_time).toLocaleTimeString('th-TH') : '-';
+    const timeFormatted = formatDateTime(e.start_time);
     const duration = e.duration_seconds ? `${e.duration_seconds.toFixed(1)}s` : '-';
 
     return `
@@ -182,7 +182,7 @@ function openModal(executionId) {
   if (!item) return;
 
   document.getElementById('modal-flow-name').innerText = `Flow: ${item.flow_name} (${item.failed_step_name || item.failed_step_id || 'Failed Step'})`;
-  document.getElementById('modal-worker-info').innerText = `Worker Node: ${item.worker_id} • เวลา: ${new Date(item.start_time).toLocaleString('th-TH')}`;
+  document.getElementById('modal-worker-info').innerText = `Worker Node: ${item.worker_id} • เวลา: ${formatDateTime(item.start_time)}`;
   
   document.getElementById('modal-confidence').innerText = item.ai_confidence ? `Confidence: ${item.ai_confidence}%` : 'Classified';
   document.getElementById('modal-summary').innerText = item.ai_summary || item.error_message || 'ไม่มีบทสรุป AI';
@@ -273,6 +273,16 @@ async function openStepsModal(executionId) {
 
 function closeStepsModal() {
   document.getElementById('steps-modal').classList.add('hidden');
+}
+
+// Date and time in the browser's time zone, e.g. 2026-11-03 12:28:44: the list spans several days,
+// so a time alone does not say which run is which
+function formatDateTime(isoString) {
+  if (!isoString) return '-';
+  const d = new Date(isoString);
+  if (isNaN(d)) return '-';
+  const pad = n => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
 }
 
 function formatTimeAgo(isoString) {
