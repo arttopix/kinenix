@@ -1049,6 +1049,8 @@ Pauses execution for a specified duration.
 ### `logic.if`
 Conditionally branches execution into `sub_steps` (when condition evaluates to true) or `else_steps` (when false).
 
+`on_error`, `max_retries`, and `retry_interval` have no effect on this step, and `kinenix validate` reports them. Put them on the steps under `Sub-steps` and `Else-steps` that may fail.
+
 **Supported Operators:**
 - `equals`, `==`, `eq`
 - `not_equals`, `!=`, `neq`
@@ -1093,6 +1095,8 @@ In `condition`, write the operators as words: `contains`, `not contains`, `in`, 
 
 ### `logic.loop`
 Iterates over an array or list of objects, binding each element to an item variable.
+
+`on_error`, `max_retries`, and `retry_interval` have no effect on this step, and `kinenix validate` reports them. Put them on the sub-steps that may fail; `on_error: next_item` there goes on with the next item.
 
 **Parameters:**
 | Parameter | Type | Required | Description |
@@ -1306,6 +1310,8 @@ Executes an external child flow (subflow) within an isolated context.
 
 ### `flow.return`
 Stops subflow execution early and returns a structured payload to the caller's `output_var`.
+
+`on_error`, `max_retries`, and `retry_interval` have no effect on this step, and `kinenix validate` reports them.
 
 **Parameters:**
 | Parameter | Type | Required | Default | Description |

@@ -18,6 +18,8 @@
 
 - **Values inside text no longer use Python's format (#174):** `Total: ${x}` gives `1200` for 1200.0, `Flag: ${x}` gives `true`, and a list or object gives JSON, in emails, files, and messages. A value alone keeps its type. Upgrading: text that depends on `True`, `False`, or Python's list format changes.
 
+- **`kinenix validate` reports error keys that have no effect (#168):** `on_error`, `max_retries`, and `retry_interval` on `logic.if`, `logic.loop`, and `flow.return` were ignored without a warning, so a run stopped where the author expected it to go on. Upgrading: `kinenix validate` now ends with exit code 4 for such a flow; move the keys to the steps inside the block. The run itself behaves as before and prints the same problem.
+
 ### Fixed
 
 - `http.request` sent an empty body for a list payload; a list is now sent as JSON (#163).
