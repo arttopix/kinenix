@@ -171,8 +171,8 @@ For actions that contain nested steps, use standard Markdown 2-space or 4-space 
 
 | Operator | True when |
 | :--- | :--- |
-| `==`, `!=` | the two sides are equal / differ (text comparison ignores case) |
-| `>`, `>=`, `<`, `<=` | both sides are numbers and compare so |
+| `==`, `!=` | the two sides are equal / differ. Two numbers compare as numbers, so `100.0`, `100`, and `100.00` are equal; anything else compares as text and ignores case. A side in quotes always compares as text |
+| `>`, `>=`, `<`, `<=` | both sides are numbers and compare so. `1,200` and `฿1200` are numbers; a side that is empty or is other text, such as `N/A` or `12 items`, stops the run with exit code 4 and says why |
 | `contains`, `not contains` | right is / is not part of left; with a list on the left, an item equals right |
 | `in`, `not in` | left is / is not part of right; with a list on the right, an item equals left |
 | `starts with`, `ends with` | left starts / ends with right |
@@ -180,7 +180,15 @@ For actions that contain nested steps, use standard Markdown 2-space or 4-space 
 
 The condition is split into its sides before variables are replaced, so values containing `<`, `>`, or the word `in` (for example `< 5,000 km`) never split it, and neither does text inside `${...}` or quotes. Quote a literal that contains an operator: `${label} == 'x > y'`.
 
-Join comparisons with `and` and `or`, and put `not` before one comparison (Kinenix 0.3.0b1 and newer). `and` binds tighter than `or`; there are no parentheses.
+Join comparisons with `and` and `or`, and put `not` before one comparison (Kinenix 0.3.0b1 and newer). `and` binds tighter than `or`. Parentheses cannot group a condition: `kinenix validate` and the run report it. Write out each case instead, or use `logic.if` steps:
+
+```markdown
+- **condition:** `${tier} == VIP and ${paid} == yes or ${amount} > 1000 and ${paid} == yes`
+```
+
+**Numbers and text:** values from CSV files and web pages are text, so a code such as `0012` looks like a number. When a value is a code, compare it as text with quotes: `${branch} == '0012'` is false for `12`, while `${branch} == 0012` is true. To compare a value that may be empty, check it first: `${amount} is not empty and ${amount} > 0`. To take a number out of longer text, use `number`: `${number(price)} > 500`.
+
+Examples:
 
 ```markdown
 - **condition:** `${row.status} == Active and ${row.amount} > 0`

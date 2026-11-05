@@ -4,10 +4,12 @@ The expression is split into operands and an operator before any variable is rep
 contains an operator character (for example "< 5,000 km") can never split the expression in the wrong
 place. Text inside ${...} and inside quotes is never read as an operator. No eval is used.
 """
+import operator
 import re
 from typing import Any, Dict, Optional, Tuple
 
 from .evaluator import VariableEvaluator
+from .expressions import ExpressionError
 
 # Binary operators: symbol or words -> operator name understood by FlowInterpreter._evaluate_condition
 _SYMBOL_OPERATORS = (("==", "equals"), ("!=", "not_equals"), (">=", "greater_than_or_equal"),
@@ -17,6 +19,88 @@ _WORD_OPERATORS = re.compile(
 _EMPTY_CHECK = re.compile(r"\s+is\s+(?P<not>not\s+)?empty\s*$", re.IGNORECASE)
 _WORD_NAMES = {"not contains": "not_contains", "not in": "not_in", "contains": "contains", "in": "in",
                "starts with": "starts_with", "ends with": "ends_with"}
+
+_ORDER_OPERATORS = {"greater_than": operator.gt, ">": operator.gt, "gt": operator.gt,
+                    "greater_than_or_equal": operator.ge, ">=": operator.ge, "gte": operator.ge,
+                    "less_than": operator.lt, "<": operator.lt, "lt": operator.lt,
+                    "less_than_or_equal": operator.le, "<=": operator.le, "lte": operator.le}
+
+# The whole value is one number: thousands separators and a money sign are allowed, other text is not, so
+# `3 of 5` is not read as 3. Use number(...) to take a number out of text
+_NUMBER_VALUE = re.compile(
+    r"(?P<sign>[+-]?)\s*[฿$€£¥]?\s*(?P<inner>-?)\s*(?P<num>\d{1,3}(?:,\d{3})+(?:\.\d+)?|\d+(?:\.\d+)?|\.\d+)\s*[฿$€£¥]?")
+
+# A group: an opening parenthesis at the start of the condition or right after and / or / not. A value such
+# as `Acme (Thailand)` is not one
+_GROUPING = re.compile(r"(?:^\s*|\s(?:and|or|not)\s+|^\s*not\s+)\(", re.IGNORECASE)
+
+
+class ConditionError(ExpressionError):
+    """A condition that cannot be decided: a side is not a number, or it groups with parentheses."""
+
+    def __init__(self, reason: str, condition: str = ""):
+        self.expression = condition
+        self.reason = reason
+        ValueError.__init__(self, f"Condition `{condition}`: {reason}" if condition else f"Condition: {reason}")
+
+
+class QuotedText(str):
+    """A side written in quotes: `==` and `!=` compare it as text, also when it looks like a number."""
+
+
+def number_value(value: Any) -> Any:
+    """The number a value stands for (100, "100.00", "1,200", "฿1200"), or None when it is not one."""
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, (int, float)):
+        return value
+    match = _NUMBER_VALUE.fullmatch(value.strip()) if isinstance(value, str) else None
+    if not match:
+        return None
+    number = float(match.group("num").replace(",", ""))
+    return -number if "-" in (match.group("sign"), match.group("inner")) else number
+
+
+def _needed_number(value: Any) -> Any:
+    number = number_value(value)
+    if number is not None:
+        return number
+    if value is None or not str(value).strip():
+        raise ConditionError("a side is empty, so it cannot be compared as a number; "
+                             "check it first with `is not empty`")
+    raise ConditionError(f"'{str(value)[:50]}' is not a number; use number(...) to read a number from text")
+
+
+def is_order_operator(name: str) -> bool:
+    return name in _ORDER_OPERATORS
+
+
+def compare_order(left: Any, name: str, right: Any) -> bool:
+    """`>`, `>=`, `<`, `<=`: both sides must be numbers, or the condition fails and says why."""
+    return _ORDER_OPERATORS[name](_needed_number(left), _needed_number(right))
+
+
+def values_equal(left: Any, right: Any) -> bool:
+    """Two numbers compare as numbers (100.0 == 100); a quoted side and anything else compare as text."""
+    if not isinstance(left, QuotedText) and not isinstance(right, QuotedText):
+        numbers = number_value(left), number_value(right)
+        if None not in numbers:
+            return numbers[0] == numbers[1]
+    s_left = "" if left is None else str(left).strip()
+    s_right = "" if right is None else str(right).strip()
+    return s_left.lower() == s_right.lower()
+
+
+def grouping_problem(expression: Any) -> Optional[str]:
+    """What is wrong with a condition that groups with parentheses, which conditions do not support."""
+    if not isinstance(expression, str):
+        return None
+    text = expression.strip().strip("`")
+    if not _GROUPING.search(_mask(text)):
+        return None
+    return ("parentheses cannot group a condition. `and` binds tighter than `or`, so write out each case, as in "
+            "`${a} == 1 and ${c} == 3 or ${b} == 2 and ${c} == 3`, or use logic.if steps. "
+            "Quote a value that starts with a parenthesis")
 
 
 def _mask(expression: str) -> str:
@@ -29,7 +113,8 @@ def _mask(expression: str) -> str:
             end = len(expression) - 1 if end == -1 else end
             out[i:end + 1] = "\0" * (end + 1 - i)
             i = end + 1
-        elif expression[i] in "'\"":
+        elif expression[i] in "'\"" and (i == 0 or not expression[i - 1].isalnum()):
+            # A quote opens only at the start of a word, so the apostrophe of don't is plain text
             end = expression.find(expression[i], i + 1)
             if end == -1:
                 i += 1
@@ -69,7 +154,8 @@ def _operand(raw: str, variables: Dict[str, Any]) -> Any:
     """A side of a condition: quoted text stays text (with ${...} replaced inside), anything else is evaluated."""
     text = raw.strip()
     if len(text) >= 2 and text[0] == text[-1] and text[0] in "'\"`":
-        return str(VariableEvaluator.evaluate_value(text[1:-1], variables))
+        inner = str(VariableEvaluator.evaluate_value(text[1:-1], variables))
+        return inner if text[0] == "`" else QuotedText(inner)
     return VariableEvaluator.evaluate_value(text, variables)
 
 
