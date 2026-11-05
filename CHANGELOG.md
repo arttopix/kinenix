@@ -2,6 +2,37 @@
 
 `kinenix`, `kinenix-hub`, and `kinenix-worker` are released together with one version. How to release: [docs/releasing.md](docs/releasing.md).
 
+## 1.0.0rc3 (2026-11-06)
+
+Fixes from a review of 1.0.0rc2. Many of them change behavior that stays the same for all of 1.x, so they come before 1.0.0, and some flows need a small change: read the notes marked Upgrading below. Before upgrading a Hub, back up `hub.db`; the first start adds a column. `## Finally` when a run is stopped (#166) is not in this release.
+
+### Changed
+
+- **Exit code 8 for partial runs (#172):** a run that finishes with failed items or steps (`on_error: continue` or `next_item`) now ends with 8 instead of 0, so a scheduler, a CI job, or an AI agent can tell it from a run where everything worked, also without a Hub. A script that treats every code other than 0 as a failure now stops on these runs; check for 8 if failed items are expected.
+- `kinenix-worker run` shows these runs as `PARTIAL`, the console summary has a `Result: PARTIAL` line, and their log file ends with `_partial.json` instead of `_success.json`.
+
+- **Conditions compare numbers as numbers (#160):** `==` and `!=` treat `100`, `100.0`, and `100.00` as equal, and `>`, `>=`, `<`, `<=` read `1,200` and `฿1200`. A side in quotes compares as text, so write codes as `${branch} == '0012'`. Upgrading: a flow that compares codes such as `0012` without quotes now also matches `12`.
+- **A condition that cannot compare numbers stops the run (#160):** `>`, `>=`, `<`, `<=` with an empty side or other text were false without a warning, so `not ${missing} > 5` was true and a rule such as `flow.fail` never fired. The run now stops with exit code 4 and says which value is the problem. Upgrading: check a value that may be empty first, as in `${amount} is not empty and ${amount} > 0`.
+- **Parentheses that group a condition are reported (#161):** `(${a} == 1 or ${b} == 2) and ${c} == 3` was split wrongly and gave the wrong result. `kinenix validate` and the run now report it; a value such as `Acme (Thailand)` is fine.
+
+- **`http.request` fails on HTTP errors (#163):** a response with status 400 or higher now fails the step, so a server error no longer passes as a success. Upgrading: a flow that checks `status_code` itself needs `fail_on_error: false`.
+- **`round()` rounds like Excel (#164):** halves go away from zero, on the number as written, so `round(2.5)` is 3 and `round(2.675, 2)` is 2.68. They were 2 and 2.67.
+
+- **Values inside text no longer use Python's format (#174):** `Total: ${x}` gives `1200` for 1200.0, `Flag: ${x}` gives `true`, and a list or object gives JSON, in emails, files, and messages. A value alone keeps its type. Upgrading: text that depends on `True`, `False`, or Python's list format changes.
+
+- **`kinenix validate` reports error keys that have no effect (#168):** `on_error`, `max_retries`, and `retry_interval` on `logic.if`, `logic.loop`, and `flow.return` were ignored without a warning, so a run stopped where the author expected it to go on. Upgrading: `kinenix validate` now ends with exit code 4 for such a flow; move the keys to the steps inside the block. The run itself behaves as before and prints the same problem.
+
+### Fixed
+
+- A null or out-of-range score from the central LLM, or a bad duration in telemetry, returned HTTP 500 and lost the run, and a score of 92 showed as 9200% (#169). The Hub now falls back to rule-based triage and keeps the run. Thanks to @mikemikimike.
+- A run sent to the Hub twice was stored twice (#165). The Hub now keeps one record for each `run_id` of a worker and answers a repeat with that record, which also makes it safe to send a run again. `executions` has a new `run_id` column, filled in at the first start of the new Hub; rows that already share a run id are kept. Upgrading: a `hub.db` from Hub 0.2.0b3 or older that holds runs must be started once with Hub 1.0.0rc2 first ([docs/hub.md](docs/hub.md), section 6.1).
+- `http.request` sent an empty body for a list payload; a list is now sent as JSON (#163).
+- `number('.5')` gave 5; it now gives 0.5 (#164).
+- An apostrophe in a value, such as `don't`, was read as the start of quoted text, which hid an `and` or `or` after it (#161).
+- `output_var` kept the previous loop item's value when an action returned nothing or a step failed with `on_error: continue` or `next_item`, so the next steps used the wrong item's data without an error (#159). It is now empty; a step skipped by its `condition` still leaves it as it was.
+- A `flow.call` that succeeded on a retry was counted as a failed item and failed steps, so the run showed as partial (#167). Only the last attempt now counts, as for any other step, and the step's `retries` says how many it took.
+- Every value in a bundle's `.env` was hidden in logs and on the Hub, so `REGION=sales` turned a flow named `sales report` into `**** report` and broke `--flow` filters (#170). A `.env` value is now hidden when its name looks secret or the flow reads it, and `flow_name` is never changed. Values read inside expressions, such as `${upper(env.NAME)}`, are now found too.
+
 ## 1.0.0rc2 (2026-11-02)
 
 Fixes found while testing 1.0.0rc1, which was published only on TestPyPI. Upgrading from 0.5.0b1: read the notes of 1.0.0rc1 below; they apply to 1.0.0rc2.

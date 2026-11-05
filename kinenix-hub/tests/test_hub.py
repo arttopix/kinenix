@@ -4,6 +4,7 @@ from unittest.mock import patch, MagicMock
 
 from kinenix_hub import config as hub_config
 from kinenix_hub.app import app
+from kinenix_hub.services.ai_summarizer import CATEGORIES
 
 # Local-dev client: no API key configured, requests arrive from loopback
 client = TestClient(app, base_url="http://127.0.0.1:8080", client=("127.0.0.1", 50000))
@@ -73,6 +74,24 @@ def test_telemetry_ingestion_success():
     assert data["has_error"] is False
 
 
+@pytest.mark.parametrize("duration", ["n/a", "NaN", -1])
+def test_telemetry_with_invalid_duration_is_recorded_as_zero(duration):
+    response = client.post("/api/v1/telemetry", json={
+        "worker_id": "invalid-duration-worker",
+        "payload": {
+            "flow_name": "Invalid Duration",
+            "start_time": "2026-11-04T18:00:00Z",
+            "has_error": False,
+            "metrics": {"total_duration_seconds": duration},
+        },
+    })
+
+    assert response.status_code == 200
+    execution = client.get(f"/api/v1/executions/{response.json()['execution_id']}").json()
+    assert execution["duration_seconds"] == 0.0
+    assert execution["end_time"] == execution["start_time"]
+
+
 def test_telemetry_ingestion_failure_with_ai():
     log_payload = {
         "flow_name": "BOT Exchange Rates",
@@ -113,6 +132,41 @@ def test_telemetry_ingestion_failure_with_ai():
         assert data["status"] == "recorded"
         assert data["has_error"] is True
         assert "Cookie" in data["ai_summary"]
+        execution = client.get(f"/api/v1/executions/{data['execution_id']}").json()
+        assert execution["ai_confidence"] == 94.0
+
+
+@pytest.mark.parametrize(
+    "score_fields",
+    [{"score": None}, {"score": 92}, {}],
+    ids=["null", "out-of-range", "missing"],
+)
+def test_invalid_llm_confidence_falls_back_to_rules_and_records_run(score_fields):
+    payload = {
+        "flow_name": "Invalid LLM Confidence",
+        "has_error": True,
+        "failure_details": {
+            "failed_step_name": "Load Page",
+            "error_type": "Technical",
+            "exception_class": "TimeoutError",
+            "error_message": "Timeout while loading page",
+        },
+        "metrics": {"total_duration_seconds": 2.0},
+    }
+    llm_response = MagicMock(status_code=200)
+    llm_response.json.return_value = {
+        "choice": "Page Load / Network Timeout",
+        **score_fields,
+    }
+
+    with patch("kinenix_hub.services.ai_summarizer.requests.post", return_value=llm_response):
+        response = client.post("/api/v1/telemetry", json={"worker_id": "invalid-score-worker", "payload": payload})
+
+    assert response.status_code == 200
+    execution = client.get(f"/api/v1/executions/{response.json()['execution_id']}").json()
+    assert execution["ai_category"] == CATEGORIES["Page Load / Network Timeout"]["th_label"]
+    assert execution["ai_confidence"] == 60.0
+    assert execution["status"] == "failed"
 
 
 def test_list_executions():

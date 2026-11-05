@@ -19,4 +19,4 @@ kinenix init my-first-flow --example first_flow
 | `config/empty.json` | Settings for the "break it on purpose" step: an empty catalog |
 | `tests/pages/` | The made-up shop's catalog: two pages of products and an empty page |
 
-A solution is not in this folder, so your assistant builds the flow instead of copying one. After you have tried, compare with the solution in the repository: https://github.com/arttopix/kinenix/blob/main/flows/examples/first_flow/solution/flow.md
+A solution is not in this folder, so your assistant builds the flow instead of copying one. After you have tried, compare with the solution in the repository: https://github.com/kinenix/kinenix/blob/main/flows/examples/first_flow/solution/flow.md

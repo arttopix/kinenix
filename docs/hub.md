@@ -251,6 +251,8 @@ The Hub keeps workers and executions in one SQLite file, `~/.kinenix/hub.db` by 
 
 A newer Hub may need more tables or columns than an existing `hub.db` has. At every start, the Hub applies the schema changes it has not applied yet and records each one in the `schema_version` table; existing data is kept. Each change runs in its own transaction, so a change that fails leaves the database as it was, and the Hub stops with the error. Nothing needs to be run by hand. The first start of Hub 0.2.0b4 also fills in the steps, failures, and run reports of the runs already stored, from their logs; on a large database this start takes longer.
 
+A `hub.db` from Hub 0.2.0b3 or older that holds runs cannot go straight to a Hub newer than 1.0.0rc2: the Hub stops at the start with `no such column: executions.run_id`, and the data stays as it was. Start Hub 1.0.0rc2 on it once first, then upgrade.
+
 ### 6.2 WAL mode and the extra files
 
 The SQLite database runs in WAL (write-ahead log) mode, so workers can write while the dashboard, `kinenix hub` commands, and other readers read. In this mode SQLite keeps two more files next to the database while the Hub runs:

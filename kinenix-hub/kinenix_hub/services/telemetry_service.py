@@ -1,7 +1,9 @@
 import datetime
 import json
 import logging
+import math
 from typing import Any, Dict, List, Optional
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from ..models import Execution, Worker
@@ -66,23 +68,62 @@ def step_summaries(raw_log: Optional[str]) -> List[Dict[str, Any]]:
     return [_step_summary(step) for step in steps if isinstance(step, dict)]
 
 
+def _duration_seconds(value: Any) -> float:
+    try:
+        seconds = float(value)
+    except (TypeError, ValueError, OverflowError):
+        logger.warning("Invalid total_duration_seconds in telemetry; storing 0.0")
+        return 0.0
+    if not math.isfinite(seconds) or seconds < 0.0:
+        logger.warning("Invalid total_duration_seconds in telemetry; storing 0.0")
+        return 0.0
+    return seconds
+
+
+def _run_id(payload: Dict[str, Any]) -> Optional[str]:
+    """The id that makes a run unique for its worker; logs from older workers have none."""
+    run_id = payload.get("run_id")
+    return run_id if isinstance(run_id, str) and 0 < len(run_id) <= 64 else None
+
+
+def _stored_run(db: Session, worker_id: str, run_id: Optional[str]) -> Optional[Execution]:
+    if not run_id:
+        return None
+    return db.query(Execution).filter(Execution.worker_id == worker_id, Execution.run_id == run_id).first()
+
+
 def ingest_execution_log(db: Session, payload: Dict[str, Any], worker_id: str = "local-worker") -> Execution:
+    run_id = _run_id(payload)
+    stored = _stored_run(db, worker_id, run_id)
+    if stored:
+        logger.info(f"Run {run_id} of {worker_id} is already stored; nothing changed")
+        return stored
+
     flow_name = payload.get("flow_name", "Unknown Flow")
     has_error = bool(payload.get("has_error", False))
     failure_details = payload.get("failure_details") or {}
-    metrics = payload.get("metrics") or {}
+    raw_metrics = payload.get("metrics")
+    metrics = raw_metrics if isinstance(raw_metrics, dict) else {}
 
     start_time_str = payload.get("start_time")
     end_time_str = payload.get("end_time")
 
-    duration = float(metrics.get("total_duration_seconds", 0.0))
+    duration = _duration_seconds(metrics.get("total_duration_seconds", 0.0))
 
     # Execution logs from kinenix-core carry start_time and a duration but no end_time
     start_time = parse_timestamp(start_time_str) or utc_now()
-    end_time = parse_timestamp(end_time_str) or (start_time + datetime.timedelta(seconds=duration))
+    end_time = parse_timestamp(end_time_str)
+    if end_time is None:
+        try:
+            end_time = start_time + datetime.timedelta(seconds=duration)
+        except OverflowError:
+            logger.warning("total_duration_seconds exceeds the supported timestamp range; storing 0.0")
+            duration = 0.0
+            end_time = start_time
 
     execution = Execution(
         worker_id=worker_id,
+        run_id=run_id,
         flow_name=flow_name,
         status=run_status(payload),
         start_time=start_time,
@@ -116,7 +157,15 @@ def ingest_execution_log(db: Session, payload: Dict[str, Any], worker_id: str = 
         execution.ai_suggestion = ai_res.get("suggestion")
 
     db.add(execution)
-    db.flush()
+    try:
+        db.flush()
+    except IntegrityError:
+        # The same run arrived at the same moment; the first one is the record
+        db.rollback()
+        stored = _stored_run(db, worker_id, run_id)
+        if stored is None:
+            raise
+        return stored
     # Steps, failures, and the run report as queryable rows (docs/hub_data.md)
     store_run_records(db, execution.id, build_run_records(payload, execution_run(execution)))
     db.commit()

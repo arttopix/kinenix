@@ -26,7 +26,7 @@ One run writes one log, also when it calls subflows: the steps of every subflow 
 The live log (`.jsonl`) gets one JSON line per step as soon as the step ends. Its path is `${run.log_path}`, so a `## On Error` or `## Finally` step can attach the log of the run so far, for example to an error e-mail. The JSON log at the end is the complete record: the live log is not changed afterwards, so a subflow failure shows the subflow's own `handled` value there.
 
 ### Key Benefits:
-- **Instant Triage:** Log filenames immediately show the execution time and status (`_success` or `_failed`), allowing developers and operations teams to spot failures without opening files.
+- **Instant Triage:** Log filenames immediately show the execution time and status (`_success`, `_partial`, or `_failed`), allowing developers and operations teams to spot failures without opening files.
 - **Logs stay with the flow:** whichever folder a command is started from, `resolve_log_dir` writes to `logs/` at the root of the git repository that holds the flow, or to `logs/` in the flow's own folder when it is not in a repository. `--log-dir` and `KINENIX_LOG_DIR` choose another folder. A worker writes the log of a `--sandbox` run next to the original bundle.
 
 ---
@@ -129,7 +129,7 @@ The worker removes secrets and personal data before anything leaves the run: the
 
 | What | How it is found | Replaced by |
 | :--- | :--- | :--- |
-| Values from the bundle's `.env`, and of every `${env.NAME}` the flow uses | Exact value (4 characters or longer), wherever it appears | `****` |
+| Values of every environment variable the flow reads (`${env.NAME}`, also inside an expression), and values in the bundle's `.env` whose name looks secret (the names of the rows below, and `pass`, `pwd`, `key`, `auth`, `cred`, `credentials`, `session`, or `cookie` as a word of the name) | Exact value (4 characters or longer), wherever it appears, except in `flow_name` and `run_id` | `****` |
 | Environment variables whose name looks secret (`SMTP_PASSWORD`, `KINENIX_HUB_API_KEY`, ...), and the Hub key saved by `kinenix connect`. `PWD` and `OLDPWD`, which Linux and macOS shells set to the working directory, are not secret | Exact value | `****` |
 | Values of keys that look secret: names containing `password`, `passwd`, `passcode`, `secret`, `token`, `api_key`, `authorization`, `private_key`; `pin` or `otp` as a word of the name (`BANK_PIN`, `otp_code`, not `shipping`); or named exactly `pwd`, `cookie(s)`, `set-cookie`, `credential(s)` | Key name, at any depth; the value is also hidden where it appears in other text | `****` |
 | `password=...`, `token: ...`, `Authorization: Bearer ...` inside text (URLs, error messages) | Pattern | `****` after the key |
@@ -139,7 +139,7 @@ The worker removes secrets and personal data before anything leaves the run: the
 | Thai phone numbers and e-mail addresses | Pattern; `"redact_contacts": false` in config keeps them | `[phone]`, `[email]` |
 | Fields listed in `config.redact` | Key name (case-insensitive); the values are also hidden in other text | `****` |
 
-Known Kinenix settings that are not secret (`KINENIX_HUB_URL`, `KINENIX_WORKER_ID`, `KINENIX_FLOWS_DIR`, and the other Hub address settings) stay readable when they come from `.env`.
+Known Kinenix settings that are not secret (`KINENIX_HUB_URL`, `KINENIX_WORKER_ID`, `KINENIX_FLOWS_DIR`, and the other Hub address settings) stay readable when they come from `.env`, and so do other `.env` values that the flow does not read and whose name does not look secret, such as `REGION`. A value the flow reads is hidden wherever it appears, also inside longer words: with `${env.REGION}` and `REGION=sales`, `wholesales` becomes `whole****`.
 
 Fields with personal or business data are listed in the project's `config/config.json`:
 

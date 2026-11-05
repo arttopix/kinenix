@@ -140,7 +140,7 @@ Every `kinenix` and `kinenix-worker` command ends with one of these codes, so a 
 
 | Code | Meaning | Try again? |
 | :--- | :--- | :--- |
-| 0 | Success. A run whose failures were all handled (`on_error: continue` or `next_item`) also ends with 0; its failed items are in the summary and on the Hub | |
+| 0 | Success: nothing failed | |
 | 1 | The run failed for a technical reason: timeout, element not found, file locked, or a failure in `## Finally` after the steps passed | Often |
 | 2 | Wrong use of the command: unknown option, missing argument, bad `--vars` JSON, a `--config` file that is not a JSON object | No; fix the command |
 | 3 | The run stopped on a business rule (`flow.fail`): the data did not pass | No; the data needs a person |
@@ -148,6 +148,7 @@ Every `kinenix` and `kinenix-worker` command ends with one of these codes, so a 
 | 5 | The flow needs a newer Kinenix (`> Requires:`) | No; upgrade Kinenix |
 | 6 | The Hub cannot be reached, or refused the key (`kinenix connect`, `kinenix hub status`, `logs`, `query --url`) | Yes, later |
 | 7 | Not found: no such flow, file, example, action, run id, table, or view | No |
+| 8 | The run finished, but items or steps failed on the way (`on_error: continue` or `next_item`); they are in the summary, the log, and on the Hub, where the run shows as partial | No; a person checks the failed items |
 | 130 | Stopped with Ctrl+C | |
 
 ```powershell

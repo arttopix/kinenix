@@ -26,7 +26,7 @@ class VariableEvaluator:
 
             def replace_match(m):
                 resolved = cls._resolve_expr(m.group(1).strip(), context_vars)
-                return str(resolved) if resolved is not None else ""
+                return expressions.to_text(resolved)
 
             return cls.PATTERN.sub(replace_match, value)
 

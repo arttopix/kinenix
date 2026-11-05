@@ -129,20 +129,21 @@ Release:
 
 Before the release candidate:
 - [x] `docs/compatibility.md`: what stays stable for all of 1.x (`flow.md` syntax, action names and parameters, CLI commands, exit codes, `--json` output and its JSON Schemas once they exist, Hub API and views, settings files) and what may still change (text meant for people, Studio, ask router)
-- [x] Exit codes with a meaning ([design/agent-interface.md](design/agent-interface.md), section 4) for `kinenix run`, `validate`, `connect`, and `kinenix hub ...`: technical failure, wrong use, business rule, invalid flow, newer Kinenix needed, Hub unreachable, not found
+- [x] Exit codes with a meaning ([design/agent-interface.md](design/agent-interface.md), section 4) for `kinenix run`, `validate`, `connect`, and `kinenix hub ...`: technical failure, wrong use, business rule, invalid flow, newer Kinenix needed, Hub unreachable, not found, partial run
 - [x] `kinenix run` prints `Run <run_id>` as its first line, and every command that takes a run accepts its `run_id`
 - [x] Deprecations announced for 2.0, with a warning when used: the `orchestrator` names and `ORCHESTRATOR_*` variables, `on_error: retry`, `fallback_step_id`, `kinenix export-md`
 - [x] Threat model of kinenix-core, kinenix-worker, and kinenix-hub (flows from others running code, secrets in logs and on the Hub, access to the Hub on the LAN without HTTPS, `hub query` changing data, file paths leaving their folder, dashboard XSS), and a code and security review against it, with every finding fixed or moved to a milestone
 - [x] Security checks in CI on every pull request: `pip-audit` (no dependency with a known vulnerability) and `bandit` (every finding fixed or explained in the code)
 - [x] Failure-injection tests: the Hub is down or slow during a run (the run completes, the log is kept, one warning); an input file is missing; the browser closes in the middle of a loop (Finally still runs, no browser process is left)
 - [x] `docs/releasing.md` installs from TestPyPI without its broken copies of other packages
-- [ ] Release `1.0.0rc2` (2026-11-02). `1.0.0rc1` went only to TestPyPI: testing it on a clean Ubuntu user and with a flow built by an AI assistant found #145 and logs written to the current folder, fixed in rc2
+- [x] Release `1.0.0rc2` (2026-11-02). `1.0.0rc1` went only to TestPyPI: testing it on a clean Ubuntu user and with a flow built by an AI assistant found #145 and logs written to the current folder, fixed in rc2
+- [ ] Release `1.0.0rc3` (2026-11-06) with the fixes from the review of rc2 (#159 to #174), which settle behavior that is frozen for 1.x. #166 follows in a later release candidate
 
-Check of 1.0.0rc2 (2026-11-02 to 2026-11-04):
+Check of 1.0.0rc3 (2026-11-06 to 2026-11-08):
 - [ ] Soak: the Raspberry Pi worker runs the offline examples (`hello`, `quote_requests`, the tutorial solution) every 30 minutes for 48 hours and reports to the Ubuntu Hub: no failure caused by Kinenix, memory does not grow, no browser process is left behind; a baseline (time and memory of a 100-item loop on the Raspberry Pi) is written in `docs/examples.md`
 - [ ] `bot_fx_rate` runs on its cron schedule on the worker
 - [ ] Ubuntu Hub: every run and failure is recorded, and `report`, `logs`, and `query` answer correctly
-- [ ] Windows: a Hub database from 0.2.0b3 upgrades with no data lost
+- [x] Windows: a Hub database from 0.2.0b3 upgrades through Hub 1.0.0rc2 with no data lost
 - [ ] Only bug fixes after the release candidate
 
 Release:

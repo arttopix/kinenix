@@ -1049,6 +1049,8 @@ Pauses execution for a specified duration.
 ### `logic.if`
 Conditionally branches execution into `sub_steps` (when condition evaluates to true) or `else_steps` (when false).
 
+`on_error`, `max_retries`, and `retry_interval` have no effect on this step, and `kinenix validate` reports them. Put them on the steps under `Sub-steps` and `Else-steps` that may fail.
+
 **Supported Operators:**
 - `equals`, `==`, `eq`
 - `not_equals`, `!=`, `neq`
@@ -1093,6 +1095,8 @@ In `condition`, write the operators as words: `contains`, `not contains`, `in`, 
 
 ### `logic.loop`
 Iterates over an array or list of objects, binding each element to an item variable.
+
+`on_error`, `max_retries`, and `retry_interval` have no effect on this step, and `kinenix validate` reports them. Put them on the sub-steps that may fail; `on_error: next_item` there goes on with the next item.
 
 **Parameters:**
 | Parameter | Type | Required | Description |
@@ -1210,7 +1214,7 @@ Month and weekday names are always English, whatever the machine's language. `we
 Enables direct REST API interaction without external browser overhead.
 
 ### `http.request`
-Executes an HTTP request and outputs status code, response headers, and body.
+Executes an HTTP request and outputs status code, response headers, and body. A response with status 400 or higher fails the step, so a server error does not pass unnoticed; `max_retries` and `on_error` apply as for any step. Set `fail_on_error: false` for a flow that checks `status_code` itself.
 
 **Parameters:**
 | Parameter | Type | Required | Default | Description |
@@ -1218,8 +1222,9 @@ Executes an HTTP request and outputs status code, response headers, and body.
 | `url` | string | Yes | - | Request URL endpoint |
 | `method` | string | No | `"GET"` | HTTP method (GET, POST, PUT, DELETE, PATCH) |
 | `headers` | dict | No | `{}` | HTTP request headers |
-| `payload` | dict / string | No | `null` | Request body (JSON dict or raw string) |
+| `payload` | dict / list / string | No | `null` | Request body (a dict or list is sent as JSON, a string as it is) |
 | `timeout` | number | No | `30` | Request timeout in seconds |
+| `fail_on_error` | boolean | No | `true` | Fail the step on a response with status 400 or higher. With `false` the step succeeds and `status_code` holds the status |
 
 **Example:**
 ```markdown
@@ -1229,6 +1234,19 @@ Executes an HTTP request and outputs status code, response headers, and body.
 - **method:** POST
 - **headers:** {"Content-Type": "application/json", "Authorization": "Bearer ${env.API_KEY}"}
 - **payload:** {"status": "completed", "total_processed": 10}
+```
+
+To handle a status yourself, such as a 404 that means the order does not exist yet:
+
+```markdown
+### 1. Look Up Order (`http.request`)
+- **url:** https://api.example.com/v1/orders/${order_id}
+- **fail_on_error:** false
+- **output_var:** `order`
+
+### 2. Stop When Missing (`flow.fail`)
+- **condition:** `${order.status_code} == 404`
+- **message:** Order ${order_id} does not exist
 ```
 
 ---
@@ -1292,6 +1310,8 @@ Executes an external child flow (subflow) within an isolated context.
 
 ### `flow.return`
 Stops subflow execution early and returns a structured payload to the caller's `output_var`.
+
+`on_error`, `max_retries`, and `retry_interval` have no effect on this step, and `kinenix validate` reports them.
 
 **Parameters:**
 | Parameter | Type | Required | Default | Description |

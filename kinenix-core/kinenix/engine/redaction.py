@@ -31,10 +31,14 @@ NOT_SECRET_ENV = {
     "PWD", "OLDPWD",
 }
 
-# Ids Kinenix creates hold no secrets, and the Hub matches records by them, so they are never changed
-KEPT_AS_IS = {"run_id"}
+# More names that mean a secret in a .env file, as a word of the name (DB_PASS, ACCESS_KEY, SESSION_ID)
+SECRET_ENV_WORD = re.compile(r"(?:^|[_\-.])(?:pass|pwd|key|auth|creds?|credentials?|session|cookies?)(?:$|[_\-.])", re.I)
 
-ENV_REFERENCE = re.compile(r"\$\{env\.([A-Za-z_][A-Za-z0-9_]*)\}")
+# Ids Kinenix creates hold no secrets, and the Hub matches records by them, so they are never changed
+KEPT_AS_IS = {"run_id", "flow_name"}
+
+# Every use of an environment variable in a flow: ${env.NAME}, and env.NAME inside an expression
+ENV_REFERENCE = re.compile(r"\benv\.([A-Za-z_][A-Za-z0-9_]*)")
 
 # Shorter values are not replaced inside text, or a value such as "1" would be hidden everywhere
 MIN_SECRET_LENGTH = 4
@@ -82,6 +86,7 @@ class Redactor:
     def __init__(self, environment: Optional[Mapping[str, str]] = None) -> None:
         """`environment` defaults to os.environ and the saved settings; secret-looking variables are hidden."""
         self._secrets: Set[str] = set()
+        self._env_read: Set[str] = set()
         self.fields: Set[str] = set()
         self.contacts = True
         if environment is None:
@@ -102,12 +107,26 @@ class Redactor:
 
     def add_env(self, names: Iterable[str]) -> None:
         for name in names:
-            if name not in NOT_SECRET_ENV and os.environ.get(name):
+            if name in NOT_SECRET_ENV:
+                continue
+            self._env_read.add(name)
+            if os.environ.get(name):
                 self.add_secret(os.environ[name])
 
     def add_env_references(self, text: str) -> None:
-        """Hides the values of every ${env.NAME} that appears in a flow."""
+        """Hides the values of every environment variable that a flow reads."""
         self.add_env(ENV_REFERENCE.findall(text))
+
+    def add_env_file_value(self, name: str, value: str) -> None:
+        """
+        Hides a value from a .env file when its name looks secret or a flow of this run reads it. Other values
+        never reach the records, and hiding them everywhere changed flow names and text such as `sales` (#170).
+        """
+        if name in NOT_SECRET_ENV:
+            return
+        if SECRET_KEY.search(name) or SECRET_ENV_WORD.search(name) or name in self._env_read:
+            self.add_secret(value)
+            self.add_secret(os.environ.get(name))
 
     def configure(self, config: Any) -> None:
         """Reads `redact` (more field names to hide) and `redact_contacts` (false keeps phones and e-mails) from config."""

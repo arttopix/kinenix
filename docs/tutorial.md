@@ -108,7 +108,7 @@ Put the pages back as they were afterwards (or copy them again with `kinenix ini
 
 ## 7. Compare with the solution
 
-The solution is not in your project, so the assistant could not copy it: [solution/flow.md](https://github.com/arttopix/kinenix/blob/main/flows/examples/first_flow/solution/flow.md) in the Kinenix repository. Your assistant's flow does not need to be the same; check that it does the same things:
+The solution is not in your project, so the assistant could not copy it: [solution/flow.md](https://github.com/kinenix/kinenix/blob/main/flows/examples/first_flow/solution/flow.md) in the Kinenix repository. Your assistant's flow does not need to be the same; check that it does the same things:
 
 - reads both pages (`web.get_list` with `next_selector: a.next`);
 - keeps the price as a number (`numeric_fields`);

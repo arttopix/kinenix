@@ -22,7 +22,7 @@ It takes about a minute for the five sample requests. Set `"headless": true` in 
 | R004 | `CX-30` is not offered: the request fails, its reason lists what the site offers (`CX-3`), and the run goes on |
 | R005 | No sub-model: skipped as a business error with `on_error: next_item`, with the reason saved |
 
-The run ends with 3 of 5 requests done; on the Hub it shows as partial success, "2 จาก 5 รายการไม่สำเร็จ".
+The run ends with 3 of 5 requests done and exit code 8; on the Hub it shows as partial success, "2 จาก 5 รายการไม่สำเร็จ".
 
 ## Output
 

@@ -101,7 +101,7 @@ All parameters passed to the action must be written as Markdown bullet items dir
 - **Number:** `- **timeout:** 5000` or `- **delay:** 1.5`. A value with a leading zero, such as `- **branch:** 0012`, stays text, so codes keep their zeros. To make any value text, quote it: `"120"`
 - **List or object (JSON):** `- **columns:** ["Date", "Rate"]` or `- **item:** {"net": "${number(inv.amount)}"}`. Put quotes around `${...}` inside JSON; a value written as `{...}` or `[...]` that is not valid JSON is read as text, and `kinenix validate` reports it
 - **Dynamic Variable Expression:** `- **url:** ${config.website}`
-- **Output Variable:** `- **output_var:** my_result` (stores action result in context)
+- **Output Variable:** `- **output_var:** my_result` (stores action result in context). An action that returns nothing and a step that fails leave it empty, so a loop never reuses the previous item's value; a step skipped by its `condition` leaves it as it was
 - **Error Handling:** `- **on_error:** continue`, `- **max_retries:** 2`, `- **retry_interval:** 3.0`, `- **fallback_step_id:** step_9` (deprecated). These four keys are compiled into the step's `error_handler`, not into the action parameters (see [Step Resilience & Error Handling](actions_reference.md#step-resilience--error-handling-error_handler)).
 
 #### Example
@@ -171,8 +171,8 @@ For actions that contain nested steps, use standard Markdown 2-space or 4-space 
 
 | Operator | True when |
 | :--- | :--- |
-| `==`, `!=` | the two sides are equal / differ (text comparison ignores case) |
-| `>`, `>=`, `<`, `<=` | both sides are numbers and compare so |
+| `==`, `!=` | the two sides are equal / differ. Two numbers compare as numbers, so `100.0`, `100`, and `100.00` are equal; anything else compares as text and ignores case. A side in quotes always compares as text |
+| `>`, `>=`, `<`, `<=` | both sides are numbers and compare so. `1,200` and `฿1200` are numbers; a side that is empty or is other text, such as `N/A` or `12 items`, stops the run with exit code 4 and says why |
 | `contains`, `not contains` | right is / is not part of left; with a list on the left, an item equals right |
 | `in`, `not in` | left is / is not part of right; with a list on the right, an item equals left |
 | `starts with`, `ends with` | left starts / ends with right |
@@ -180,7 +180,15 @@ For actions that contain nested steps, use standard Markdown 2-space or 4-space 
 
 The condition is split into its sides before variables are replaced, so values containing `<`, `>`, or the word `in` (for example `< 5,000 km`) never split it, and neither does text inside `${...}` or quotes. Quote a literal that contains an operator: `${label} == 'x > y'`.
 
-Join comparisons with `and` and `or`, and put `not` before one comparison (Kinenix 0.3.0b1 and newer). `and` binds tighter than `or`; there are no parentheses.
+Join comparisons with `and` and `or`, and put `not` before one comparison (Kinenix 0.3.0b1 and newer). `and` binds tighter than `or`. Parentheses cannot group a condition: `kinenix validate` and the run report it. Write out each case instead, or use `logic.if` steps:
+
+```markdown
+- **condition:** `${tier} == VIP and ${paid} == yes or ${amount} > 1000 and ${paid} == yes`
+```
+
+**Numbers and text:** values from CSV files and web pages are text, so a code such as `0012` looks like a number. When a value is a code, compare it as text with quotes: `${branch} == '0012'` is false for `12`, while `${branch} == 0012` is true. To compare a value that may be empty, check it first: `${amount} is not empty and ${amount} > 0`. To take a number out of longer text, use `number`: `${number(price)} > 500`.
+
+Examples:
 
 ```markdown
 - **condition:** `${row.status} == Active and ${row.amount} > 0`
@@ -242,11 +250,11 @@ Inside `${...}`, a value can also be calculated: counted, joined, cleaned, picke
 | :--- | :--- | :--- |
 | `len(x)` | Number of items, keys, or characters; `0` when empty | `${len(rows)}` |
 | `join(list, sep)` | The items as text, joined by `sep` (default `", "`) | `${join(ids, ', ')}` gives `R001, R002` |
-| `number(x)` | The first number in the text, without thousands separators and units; `(1,200)` is `-1200`; empty when empty | `${number('15,434.75 บาท/ปี')}` gives `15434.75` |
+| `number(x)` | The first number in the text, without thousands separators and units; `(1,200)` is `-1200`, `.5` is `0.5`; empty when empty. It stops at the first space or letter, so `12 345` is `12` and `1e5` is `1` | `${number('15,434.75 บาท/ปี')}` gives `15434.75` |
 | `trim(x)`, `lower(x)`, `upper(x)` | Without surrounding spaces, lower case, upper case | `${trim(row.name)}` |
 | `replace(x, old, new)` | Every `old` replaced by `new` | `${replace(row.price, ' บาท', '')}` |
 | `default(x, fallback)` | `x`, or `fallback` when `x` is empty | `${default(row.note, '-')}` |
-| `round(x, digits)` | Rounded number (`digits` defaults to 0) | `${round(total / count, 2)}` |
+| `round(x, digits)` | Rounded number (`digits` defaults to 0). Halves go away from zero, as in Excel: `2.5` gives `3`, `-2.5` gives `-3`, and `round(2.675, 2)` gives `2.68` | `${round(total / count, 2)}` |
 | `part(x, sep, n)` | Piece `n` (from 0; negative counts from the end) of the text split at `sep` | `${part('25-10-2019', '-', 1)}` gives `10` |
 | `substring(x, start, length)` | `length` characters from position `start` (from 0), or to the end | `${substring('TH2026ABC', 2, 4)}` gives `2026` |
 
@@ -257,6 +265,7 @@ Inside `${...}`, a value can also be calculated: counted, joined, cleaned, picke
 | Key with spaces or symbols | `${row['Unit Price (THB)']}` (or `${row.Unit Price (THB)}`, as before) |
 | Text and numbers as values | `'abc'`, `"abc"`, `12`, `3.5` |
 
+- **Values inside text read as written in a flow.** In `Total: ${x}`, `1200.0` gives `1200`, true gives `true`, and a list or object gives JSON, such as `[{"a": 1}]`. A value alone, such as `${x}`, keeps its type, so `excel.write` still gets a number. To control decimals, use `round`.
 - **Arithmetic needs numbers.** Text that is a plain number (`"12"`, `"3.5"`, as read from CSV) counts as a number; other text is an error that suggests `number(...)`. A whole result is written without `.0`.
 - **Missing values are empty**, as for variables: a missing key or an index past the end gives empty, and the functions treat empty as listed above.
 - **A variable that exists is always read as before.** `${row.First Name}` and `${row.Role in Company}` are keys of `row`, not expressions. Text is evaluated as an expression only when it names no existing variable.
@@ -280,7 +289,7 @@ Any step can retry and then decide what happens:
 - **on_error:** continue
 ```
 
-`max_retries` always retries first (2 more attempts above). After the last attempt, `on_error` decides:
+`max_retries` always retries first (2 more attempts above). Only the last attempt counts in the run's record, also for a `flow.call`: a step that succeeds on a retry is not a failure, and the step's `retries` says how many it took. After the last attempt, `on_error` decides:
 
 | `on_error` | After the last attempt |
 | :--- | :--- |
@@ -309,6 +318,21 @@ Any step can retry and then decide what happens:
 ```
 
 With nested loops, `next_item` ends the item of the innermost loop. In a subflow called for each item, set `next_item` on the `flow.call` step in the loop; the subflow's own steps are not inside that loop.
+
+**Where these keys go:** on the step that may fail. They have no effect on `logic.if`, `logic.loop`, or `flow.return`, and `kinenix validate` reports them there. Put them on the steps inside the block:
+
+```markdown
+### 3. Each Invoice (`logic.loop`)
+- **items:** ${invoices}
+- **item_var:** `inv`
+- **Sub-steps:**
+  - Upload (`http.request`):
+    - **url:** ${config.api_url}
+    - **max_retries:** 2
+    - **on_error:** continue
+```
+
+For a failure anywhere in the flow, use `## On Error` (section 3.2). To go on after a whole block fails, put `on_error: continue` on each step inside it, or move the block to a subflow and set `on_error` on the `flow.call`, which does retry and continue.
 
 `fallback_step_id` still runs a recovery step instead, but it is deprecated and removed in Kinenix 2.0: use `on_error: continue` and a next step with a `condition`, or `## On Error`. `max_retries` and `retry_interval` accept `${...}`, for example `${config.retries}`. Business errors (`flow.fail`) are not retried.
 

@@ -7,7 +7,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from .conditions import parse_boolean, resolve_condition
+from .conditions import (ConditionError, compare_order, grouping_problem, is_order_operator, parse_boolean,
+                         resolve_condition, values_equal)
 from .evaluator import VariableEvaluator
 from .logger import ExecutionLogger
 from .markdown import JSON_FLOW_NOT_RUN, SECTION_HEADINGS, markdown_to_flow
@@ -592,12 +593,13 @@ class FlowInterpreter:
 
         def _invoke_step_action() -> Any:
             if step.action == "flow.call":
-                self._handle_flow_call_step(step, evaluated_params, context, start_time)
+                self._handle_flow_call_step(step, evaluated_params, context, start_time, retries=attempt)
                 return None
             action_cls = ActionRegistry.get(step.action)
             action_instance = action_cls()
             output = action_instance.execute(evaluated_params, context)
-            if step.output_var and output is not None:
+            if step.output_var:
+                # Also when the action returned nothing: a loop must not keep the previous item's value (#159)
                 context.set_variable(step.output_var, output)
             return output
 
@@ -609,6 +611,8 @@ class FlowInterpreter:
 
         attempt = 0
         last_error = None
+        results_before = len(context.step_results)
+        failures_before = self._failure_count(context)
         while attempt <= max_retries:
             try:
                 output = _invoke_step_action()
@@ -634,6 +638,9 @@ class FlowInterpreter:
                 last_error = e
                 # Business errors (bad data, a rule not met) fail the same way on every attempt
                 if attempt < max_retries and not is_business_error(e):
+                    # Only the last attempt counts, as for any step: a subflow already added this one's steps (#167)
+                    del context.step_results[results_before:]
+                    context.set_variable("__failures__", failures_before)
                     attempt += 1
                     self.logger.logger.warning(
                         f"Step '{step.id}' ({step.name}) failed attempt {attempt}/{max_retries + 1}: "
@@ -643,6 +650,9 @@ class FlowInterpreter:
                     time.sleep(retry_interval)
                 else:
                     break
+
+        if step.output_var:
+            context.set_variable(step.output_var, None)  # A failed step has no result, not an earlier one (#159)
 
         end_time = local_now()
         duration = (end_time - start_time).total_seconds()
@@ -929,15 +939,14 @@ class FlowInterpreter:
             v = v.strip().strip("'\"")
             if k and k not in os.environ:
                 os.environ[k] = v
-            # Values from .env are secrets unless they are known Kinenix settings
-            if k and k not in NOT_SECRET_ENV:
-                self.logger.redactor.add_secret(v)
-                self.logger.redactor.add_secret(os.environ.get(k))
+            if k:
+                self.logger.redactor.add_env_file_value(k, v)
 
     def _resolve_subflow_path(self, flow_target: str, context: ExecutionContext) -> Path:
         return resolve_subflow_path(flow_target, context)
 
-    def _handle_flow_call_step(self, step: Step, evaluated_params: Dict[str, Any], context: ExecutionContext, start_time: datetime) -> None:
+    def _handle_flow_call_step(self, step: Step, evaluated_params: Dict[str, Any], context: ExecutionContext,
+                               start_time: datetime, retries: int = 0) -> None:
         flow_target = evaluated_params.get("flow")
         if not flow_target:
             raise ValueError(f"Step '{step.id}' (flow.call) requires 'flow' parameter specifying path to target flow JSON")
@@ -1072,6 +1081,7 @@ class FlowInterpreter:
             start_time=start_time,
             end_time=end_time,
             duration_seconds=duration,
+            retries=retries,
             output={
                 "subflow_name": subflow_def.name,
                 "subflow_path": str(resolved_path),
@@ -1109,34 +1119,16 @@ class FlowInterpreter:
         if op in ["is_not_empty", "not_empty"]:
             return left is not None and str(left).strip() != ""
 
-        if op in ["greater_than", ">", "gt"]:
-            try:
-                return float(left) > float(right)
-            except (ValueError, TypeError):
-                return False
-        if op in ["greater_than_or_equal", ">=", "gte"]:
-            try:
-                return float(left) >= float(right)
-            except (ValueError, TypeError):
-                return False
-        if op in ["less_than", "<", "lt"]:
-            try:
-                return float(left) < float(right)
-            except (ValueError, TypeError):
-                return False
-        if op in ["less_than_or_equal", "<=", "lte"]:
-            try:
-                return float(left) <= float(right)
-            except (ValueError, TypeError):
-                return False
+        if is_order_operator(op):
+            return compare_order(left, op, right)
 
         s_left = "" if left is None else str(left).strip()
         s_right = "" if right is None else str(right).strip()
 
         if op in ["equals", "==", "eq"]:
-            return s_left.lower() == s_right.lower()
+            return values_equal(left, right)
         if op in ["not_equals", "!=", "neq"]:
-            return s_left.lower() != s_right.lower()
+            return not values_equal(left, right)
         # `left in right` means left is part of right; a list on the other side is checked item by item
         if op in ["in", "not_in"]:
             if isinstance(right, (list, tuple, set)):
@@ -1167,6 +1159,9 @@ class FlowInterpreter:
         text = str(expression).strip()
         if len(text) >= 2 and text.startswith("`") and text.endswith("`"):
             text = text[1:-1].strip()
+        problem = grouping_problem(text)
+        if problem:
+            raise ConditionError(problem, text)
         return self._boolean_holds(parse_boolean(text), variables)
 
     def _boolean_holds(self, tree: Any, variables: Dict[str, Any]) -> bool:
@@ -1183,7 +1178,10 @@ class FlowInterpreter:
         left, operator, right = resolve_condition(expression, variables)
         if operator is None:
             return left if isinstance(left, bool) else str(left).strip().lower() in ["true", "1", "yes"]
-        return self._evaluate_condition(left, operator, right)
+        try:
+            return self._evaluate_condition(left, operator, right)
+        except ConditionError as e:
+            raise ConditionError(e.reason, expression) from None
 
     def _evaluate_condition_expr(self, expr: Any) -> bool:
         """A condition whose variables are already replaced; kept for callers outside the interpreter."""

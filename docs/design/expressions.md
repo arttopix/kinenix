@@ -1,6 +1,6 @@
 # Design: Expressions in `${...}` (0.3.0b1)
 
-Status: **approved** (2026-10-16). Milestone: [0.3.0b1: Expressions](https://github.com/arttopix/kinenix/milestone/3). Issue: #56. Checklist: #86.
+Status: **approved** (2026-10-16). Milestone: [0.3.0b1: Expressions](https://github.com/kinenix/kinenix/milestone/3). Issue: #56. Checklist: #86.
 
 ## 1. Goal
 
@@ -61,7 +61,7 @@ So a dictionary key that happens to look like an expression is still read as a k
 | `trim(x)`, `lower(x)`, `upper(x)` | Text without surrounding spaces, lower case, upper case | `""` |
 | `replace(x, old, new)` | Text with every `old` replaced | `""` |
 | `default(x, fallback)` | `x`, or `fallback` when `x` is empty or `""` | `fallback` |
-| `round(x, digits)` | Rounded number (`digits` defaults to 0) | empty |
+| `round(x, digits)` | Rounded number (`digits` defaults to 0), halves away from zero as in Excel | empty |
 | `part(x, sep, n)` | Piece `n` of the text split at `sep`, counted from 0; a negative `n` counts from the end: `part('25-10-2019', '-', 1)` gives `10`, `part('INV-2026-00123', '-', -1)` gives `00123` | `""`, also when there is no piece `n` |
 | `substring(x, start, length)` | `length` characters from position `start` (counted from 0), or to the end when `length` is left out; positions past the end give what is there | `""` |
 
