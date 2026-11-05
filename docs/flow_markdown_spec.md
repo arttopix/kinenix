@@ -265,6 +265,7 @@ Inside `${...}`, a value can also be calculated: counted, joined, cleaned, picke
 | Key with spaces or symbols | `${row['Unit Price (THB)']}` (or `${row.Unit Price (THB)}`, as before) |
 | Text and numbers as values | `'abc'`, `"abc"`, `12`, `3.5` |
 
+- **Values inside text read as written in a flow.** In `Total: ${x}`, `1200.0` gives `1200`, true gives `true`, and a list or object gives JSON, such as `[{"a": 1}]`. A value alone, such as `${x}`, keeps its type, so `excel.write` still gets a number. To control decimals, use `round`.
 - **Arithmetic needs numbers.** Text that is a plain number (`"12"`, `"3.5"`, as read from CSV) counts as a number; other text is an error that suggests `number(...)`. A whole result is written without `.0`.
 - **Missing values are empty**, as for variables: a missing key or an index past the end gives empty, and the functions treat empty as listed above.
 - **A variable that exists is always read as before.** `${row.First Name}` and `${row.Role in Company}` are keys of `row`, not expressions. Text is evaluated as an expression only when it names no existing variable.

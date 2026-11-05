@@ -16,6 +16,8 @@
 - **`http.request` fails on HTTP errors (#163):** a response with status 400 or higher now fails the step, so a server error no longer passes as a success. Upgrading: a flow that checks `status_code` itself needs `fail_on_error: false`.
 - **`round()` rounds like Excel (#164):** halves go away from zero, on the number as written, so `round(2.5)` is 3 and `round(2.675, 2)` is 2.68. They were 2 and 2.67.
 
+- **Values inside text no longer use Python's format (#174):** `Total: ${x}` gives `1200` for 1200.0, `Flag: ${x}` gives `true`, and a list or object gives JSON, in emails, files, and messages. A value alone keeps its type. Upgrading: text that depends on `True`, `False`, or Python's list format changes.
+
 ### Fixed
 
 - `http.request` sent an empty body for a list payload; a list is now sent as JSON (#163).
