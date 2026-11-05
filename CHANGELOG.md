@@ -13,8 +13,13 @@
 - **A condition that cannot compare numbers stops the run (#160):** `>`, `>=`, `<`, `<=` with an empty side or other text were false without a warning, so `not ${missing} > 5` was true and a rule such as `flow.fail` never fired. The run now stops with exit code 4 and says which value is the problem. Upgrading: check a value that may be empty first, as in `${amount} is not empty and ${amount} > 0`.
 - **Parentheses that group a condition are reported (#161):** `(${a} == 1 or ${b} == 2) and ${c} == 3` was split wrongly and gave the wrong result. `kinenix validate` and the run now report it; a value such as `Acme (Thailand)` is fine.
 
+- **`http.request` fails on HTTP errors (#163):** a response with status 400 or higher now fails the step, so a server error no longer passes as a success. Upgrading: a flow that checks `status_code` itself needs `fail_on_error: false`.
+- **`round()` rounds like Excel (#164):** halves go away from zero, on the number as written, so `round(2.5)` is 3 and `round(2.675, 2)` is 2.68. They were 2 and 2.67.
+
 ### Fixed
 
+- `http.request` sent an empty body for a list payload; a list is now sent as JSON (#163).
+- `number('.5')` gave 5; it now gives 0.5 (#164).
 - An apostrophe in a value, such as `don't`, was read as the start of quoted text, which hid an `and` or `or` after it (#161).
 - `output_var` kept the previous loop item's value when an action returned nothing or a step failed with `on_error: continue` or `next_item`, so the next steps used the wrong item's data without an error (#159). It is now empty; a step skipped by its `condition` still leaves it as it was.
 - A `flow.call` that succeeded on a retry was counted as a failed item and failed steps, so the run showed as partial (#167). Only the last attempt now counts, as for any other step, and the step's `retries` says how many it took.

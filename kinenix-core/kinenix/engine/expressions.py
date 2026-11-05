@@ -10,6 +10,7 @@ import math
 import os
 import re
 import warnings
+from decimal import ROUND_HALF_UP, Context, Decimal, InvalidOperation
 from functools import lru_cache
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
@@ -23,7 +24,8 @@ _LOOKS_LIKE_EXPRESSION = re.compile(r"\w\(|\[|['\"]|[+*/%<>=!]")
 _PLAIN_NUMBER = re.compile(r"^[+-]?\d+(\.\d+)?$")
 # The first number in a text: optional minus or opening parenthesis, digits with thousands separators, decimals
 # A minus sign or "(" counts only when no letter or digit is right before it: "INV-100" is 100, "(1,200)" is -1200
-_NUMBER_IN_TEXT = re.compile(r"(?:(?<!\w)(?P<neg>[-(]))?\s*(?P<num>\d[\d,]*(?:\.\d+)?)")
+# A leading decimal point counts when it starts a word: ".5" is 0.5, "v.5" is 5
+_NUMBER_IN_TEXT = re.compile(r"(?:(?<!\w)(?P<neg>[-(]))?\s*(?P<num>\d[\d,]*(?:\.\d+)?|(?<![\w.])\.\d+)")
 
 
 class ExpressionError(ValueError):
@@ -156,8 +158,18 @@ def _round(x: Any, digits: Any = 0) -> Any:
     if x is None or x == "":
         return None
     places = _whole_number(digits, "the number of digits")
-    result = round(_number(x, "the value"), places)
-    return int(result) if places <= 0 else result
+    value = _number(x, "the value")
+    if isinstance(value, float) and not math.isfinite(value):
+        raise ValueError("the value is not a finite number")
+    if isinstance(value, int) and places >= 0:
+        return value
+    # As in Excel: halves go away from zero, on the number as written, so 2.675 gives 2.68 and 2.5 gives 3
+    try:
+        result = Decimal(str(value)).quantize(Decimal(1).scaleb(-places), rounding=ROUND_HALF_UP,
+                                              context=Context(prec=1000))
+    except InvalidOperation:
+        return value  # More digits than the number has
+    return int(result) if places <= 0 else float(result)
 
 
 def _part(x: Any, sep: Any, n: Any) -> str:

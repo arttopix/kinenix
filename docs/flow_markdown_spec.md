@@ -250,11 +250,11 @@ Inside `${...}`, a value can also be calculated: counted, joined, cleaned, picke
 | :--- | :--- | :--- |
 | `len(x)` | Number of items, keys, or characters; `0` when empty | `${len(rows)}` |
 | `join(list, sep)` | The items as text, joined by `sep` (default `", "`) | `${join(ids, ', ')}` gives `R001, R002` |
-| `number(x)` | The first number in the text, without thousands separators and units; `(1,200)` is `-1200`; empty when empty | `${number('15,434.75 บาท/ปี')}` gives `15434.75` |
+| `number(x)` | The first number in the text, without thousands separators and units; `(1,200)` is `-1200`, `.5` is `0.5`; empty when empty. It stops at the first space or letter, so `12 345` is `12` and `1e5` is `1` | `${number('15,434.75 บาท/ปี')}` gives `15434.75` |
 | `trim(x)`, `lower(x)`, `upper(x)` | Without surrounding spaces, lower case, upper case | `${trim(row.name)}` |
 | `replace(x, old, new)` | Every `old` replaced by `new` | `${replace(row.price, ' บาท', '')}` |
 | `default(x, fallback)` | `x`, or `fallback` when `x` is empty | `${default(row.note, '-')}` |
-| `round(x, digits)` | Rounded number (`digits` defaults to 0) | `${round(total / count, 2)}` |
+| `round(x, digits)` | Rounded number (`digits` defaults to 0). Halves go away from zero, as in Excel: `2.5` gives `3`, `-2.5` gives `-3`, and `round(2.675, 2)` gives `2.68` | `${round(total / count, 2)}` |
 | `part(x, sep, n)` | Piece `n` (from 0; negative counts from the end) of the text split at `sep` | `${part('25-10-2019', '-', 1)}` gives `10` |
 | `substring(x, start, length)` | `length` characters from position `start` (from 0), or to the end | `${substring('TH2026ABC', 2, 4)}` gives `2026` |
 
