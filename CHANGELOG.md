@@ -2,7 +2,9 @@
 
 `kinenix`, `kinenix-hub`, and `kinenix-worker` are released together with one version. How to release: [docs/releasing.md](docs/releasing.md).
 
-## Unreleased
+## 1.0.0rc3 (2026-11-06)
+
+Fixes from a review of 1.0.0rc2. Many of them change behavior that stays the same for all of 1.x, so they come before 1.0.0, and some flows need a small change: read the notes marked Upgrading below. Before upgrading a Hub, back up `hub.db`; the first start adds a column. `## Finally` when a run is stopped (#166) is not in this release.
 
 ### Changed
 
