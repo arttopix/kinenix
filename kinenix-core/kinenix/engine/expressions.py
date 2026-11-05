@@ -6,6 +6,7 @@ Nothing here calls eval, exec, or compile, and only dictionary keys are read: at
 objects and names starting with "_" are refused.
 """
 import ast
+import json
 import math
 import os
 import re
@@ -53,11 +54,21 @@ class _Environment:
 # ---------------------------------------------------------------------------------------------------
 
 def _text(value: Any) -> str:
+    """A value as it reads in text: 1200, true, and JSON for lists and objects, not Python's 1200.0, True, or [{'a': 1}]."""
     if value is None:
         return ""
-    if isinstance(value, float) and value.is_integer():
-        return str(int(value))
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    if isinstance(value, float):
+        return str(_whole(value))
+    if isinstance(value, (dict, list, tuple)):
+        return json.dumps(value, ensure_ascii=False, default=str)
     return str(value)
+
+
+def to_text(value: Any) -> str:
+    """The text of a value placed inside longer text, such as `Total: ${x}`."""
+    return _text(value)
 
 
 def _whole(value: Any) -> Any:
