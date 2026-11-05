@@ -9,7 +9,7 @@ from ..models.context import ExecutionContext
 
 @register_action("http.request")
 class HttpRequestAction(BaseAction):
-    accepted_parameters = ('url', 'method', 'headers', 'payload', 'timeout')
+    accepted_parameters = ('url', 'method', 'headers', 'payload', 'timeout', 'fail_on_error')
     side_effects = ('network',)
 
     def execute(self, parameters: Dict[str, Any], context: ExecutionContext) -> Any:
@@ -18,12 +18,13 @@ class HttpRequestAction(BaseAction):
         headers = parameters.get("headers", {})
         payload = parameters.get("payload")
         timeout = parameters.get("timeout", 30)
+        fail_on_error = str(parameters.get("fail_on_error", True)).strip().lower() not in ("false", "no", "0", "off")
 
         response = requests.request(
             method=method,
             url=url,
             headers=headers,
-            json=payload if isinstance(payload, dict) else None,
+            json=payload if isinstance(payload, (dict, list)) else None,
             data=payload if isinstance(payload, str) else None,
             timeout=timeout
         )
@@ -32,6 +33,10 @@ class HttpRequestAction(BaseAction):
             body = response.json()
         except Exception:
             body = response.text
+
+        if fail_on_error and response.status_code >= 400:
+            raise requests.HTTPError(
+                f"{method} {url} answered HTTP {response.status_code}: {str(body)[:200]}", response=response)
 
         return {
             "status_code": response.status_code,
