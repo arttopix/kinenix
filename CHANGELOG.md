@@ -22,6 +22,7 @@
 
 ### Fixed
 
+- A run sent to the Hub twice was stored twice (#165). The Hub now keeps one record for each `run_id` of a worker and answers a repeat with that record, which also makes it safe to send a run again. `executions` has a new `run_id` column, filled in at the first start of the new Hub; rows that already share a run id are kept. Upgrading: a `hub.db` from Hub 0.2.0b3 or older that holds runs must be started once with Hub 1.0.0rc2 first ([docs/hub.md](docs/hub.md), section 6.1).
 - `http.request` sent an empty body for a list payload; a list is now sent as JSON (#163).
 - `number('.5')` gave 5; it now gives 0.5 (#164).
 - An apostrophe in a value, such as `don't`, was read as the start of quoted text, which hid an `and` or `or` after it (#161).

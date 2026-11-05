@@ -3,6 +3,7 @@ import json
 import logging
 import math
 from typing import Any, Dict, List, Optional
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from ..models import Execution, Worker
@@ -79,7 +80,25 @@ def _duration_seconds(value: Any) -> float:
     return seconds
 
 
+def _run_id(payload: Dict[str, Any]) -> Optional[str]:
+    """The id that makes a run unique for its worker; logs from older workers have none."""
+    run_id = payload.get("run_id")
+    return run_id if isinstance(run_id, str) and 0 < len(run_id) <= 64 else None
+
+
+def _stored_run(db: Session, worker_id: str, run_id: Optional[str]) -> Optional[Execution]:
+    if not run_id:
+        return None
+    return db.query(Execution).filter(Execution.worker_id == worker_id, Execution.run_id == run_id).first()
+
+
 def ingest_execution_log(db: Session, payload: Dict[str, Any], worker_id: str = "local-worker") -> Execution:
+    run_id = _run_id(payload)
+    stored = _stored_run(db, worker_id, run_id)
+    if stored:
+        logger.info(f"Run {run_id} of {worker_id} is already stored; nothing changed")
+        return stored
+
     flow_name = payload.get("flow_name", "Unknown Flow")
     has_error = bool(payload.get("has_error", False))
     failure_details = payload.get("failure_details") or {}
@@ -104,6 +123,7 @@ def ingest_execution_log(db: Session, payload: Dict[str, Any], worker_id: str = 
 
     execution = Execution(
         worker_id=worker_id,
+        run_id=run_id,
         flow_name=flow_name,
         status=run_status(payload),
         start_time=start_time,
@@ -137,7 +157,15 @@ def ingest_execution_log(db: Session, payload: Dict[str, Any], worker_id: str = 
         execution.ai_suggestion = ai_res.get("suggestion")
 
     db.add(execution)
-    db.flush()
+    try:
+        db.flush()
+    except IntegrityError:
+        # The same run arrived at the same moment; the first one is the record
+        db.rollback()
+        stored = _stored_run(db, worker_id, run_id)
+        if stored is None:
+            raise
+        return stored
     # Steps, failures, and the run report as queryable rows (docs/hub_data.md)
     store_run_records(db, execution.id, build_run_records(payload, execution_run(execution)))
     db.commit()

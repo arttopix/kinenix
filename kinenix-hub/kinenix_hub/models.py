@@ -45,9 +45,12 @@ class Worker(Base):
 
 class Execution(Base):
     __tablename__ = "executions"
+    # A run sent twice is stored once (#165). Rows without a run id, from older workers, are not compared
+    __table_args__ = (Index("uq_executions_worker_run", "worker_id", "run_id", unique=True),)
 
     id = Column(String(64), primary_key=True, default=lambda: str(uuid.uuid4()))
     worker_id = Column(String(64), default="local-worker", index=True)
+    run_id = Column(String(64), nullable=True)
     flow_name = Column(String(128), nullable=False, index=True)
     status = Column(String(32), default="success", index=True)  # success, partial, failed, running
     start_time = Column(DateTime, default=utc_now)

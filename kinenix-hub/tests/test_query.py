@@ -134,7 +134,7 @@ def test_catalog_and_describe_use_the_data_dictionary(conn):
 
 
 def test_query_over_http_hides_the_raw_log():
-    client.post("/api/v1/telemetry", json={"worker_id": "query-worker", "payload": RUN})
+    client.post("/api/v1/telemetry", json={"worker_id": "query-worker", "payload": {**RUN, "run_id": "20261012T020500-qde2"}})
     res = client.post("/api/v1/query", json={"source": "SELECT raw_log, flow_name FROM executions WHERE flow_name = 'Query Demo'"})
     assert res.status_code == 200
     assert {tuple(r) for r in res.json()["rows"]} == {(None, "Query Demo")}
