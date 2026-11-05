@@ -185,6 +185,22 @@ def _expression_problems(step: Step, where: str) -> List[str]:
     return [f"{where}{line}: {problem}" for problem in found]
 
 
+# Actions the interpreter runs itself, before it reads error_handler: these keys have no effect on them (#168)
+NO_ERROR_HANDLER = {
+    "logic.if": "Put them on the steps under Sub-steps and Else-steps that may fail.",
+    "logic.loop": "Put them on the sub-steps that may fail; on_error: next_item there goes on with the next item.",
+    "flow.return": "Delete them; flow.return only ends the flow.",
+}
+
+
+def _ignored_error_handler(step: Step) -> Optional[str]:
+    hint = NO_ERROR_HANDLER.get(step.action)
+    keys = step.error_handler.model_dump(exclude_defaults=True) if step.error_handler else None
+    if not hint or not keys:
+        return None
+    return f"{', '.join(keys)} has no effect on {step.action}. {hint}"
+
+
 def validate_flow(flow: FlowDefinition) -> List[str]:
     """Return human-readable problems found in the flow; an empty list means none."""
     issues: List[str] = []
@@ -210,6 +226,9 @@ def validate_flow(flow: FlowDefinition) -> List[str]:
             problem = grouping_problem(condition)
             if problem:
                 issues.append(f"{where}{f', line {step.line}' if step.line else ''}: {problem}")
+        ignored = _ignored_error_handler(step)
+        if ignored:
+            issues.append(f"{where}{f', line {step.line}' if step.line else ''}: {ignored}")
         on_error = step.error_handler.on_error if step.error_handler else None
         if on_error is not None and str(on_error).strip().lower() not in ON_ERROR_VALUES:
             issues.append(f"{where}: on_error '{on_error}' is not one of {', '.join(ON_ERROR_VALUES)}; "

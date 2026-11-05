@@ -319,6 +319,21 @@ Any step can retry and then decide what happens:
 
 With nested loops, `next_item` ends the item of the innermost loop. In a subflow called for each item, set `next_item` on the `flow.call` step in the loop; the subflow's own steps are not inside that loop.
 
+**Where these keys go:** on the step that may fail. They have no effect on `logic.if`, `logic.loop`, or `flow.return`, and `kinenix validate` reports them there. Put them on the steps inside the block:
+
+```markdown
+### 3. Each Invoice (`logic.loop`)
+- **items:** ${invoices}
+- **item_var:** `inv`
+- **Sub-steps:**
+  - Upload (`http.request`):
+    - **url:** ${config.api_url}
+    - **max_retries:** 2
+    - **on_error:** continue
+```
+
+For a failure anywhere in the flow, use `## On Error` (section 3.2). To go on after a whole block fails, put `on_error: continue` on each step inside it, or move the block to a subflow and set `on_error` on the `flow.call`, which does retry and continue.
+
 `fallback_step_id` still runs a recovery step instead, but it is deprecated and removed in Kinenix 2.0: use `on_error: continue` and a next step with a `condition`, or `## On Error`. `max_retries` and `retry_interval` accept `${...}`, for example `${config.retries}`. Business errors (`flow.fail`) are not retried.
 
 ### 3.2 `## On Error` and `## Finally`
