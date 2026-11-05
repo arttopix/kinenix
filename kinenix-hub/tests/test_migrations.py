@@ -25,7 +25,11 @@ NEXT = MIGRATIONS[-1].number + 1
 
 
 def _legacy_hub_db(path):
-    """A database as Hub 0.2.0b3 left it: workers and executions without details, a row, and no schema_version."""
+    """
+    A database as Hub 0.2.0b3 left it: workers and executions without details, a row, and no schema_version.
+    It keeps run_id: migration 2 reads every column of the model, so a real one must go through Hub 1.0.0rc2 first
+    (docs/hub.md, section 6.1).
+    """
     engine = _engine(path)
     Base.metadata.create_all(bind=engine)
     with engine.begin() as conn:

@@ -107,10 +107,33 @@ def _partial_status(conn: Connection) -> None:
         "AND EXISTS (SELECT 1 FROM failures f WHERE f.execution_id = executions.id)"))
 
 
+def _run_id_column(conn: Connection) -> None:
+    """
+    executions.run_id with a unique index, so a run sent twice is stored once (#165). It is filled in from
+    details; when rows already share a run id, the first keeps it and the others stay as they are, with none.
+    """
+    add_column_if_missing(conn, "executions", "run_id", "VARCHAR(64)")
+    rows = conn.execute(text(
+        "SELECT id, worker_id, details FROM executions WHERE run_id IS NULL ORDER BY created_at, id")).fetchall()
+    seen = set()
+    for row in rows:
+        try:
+            details = json.loads(row.details) if row.details else None
+        except ValueError:
+            details = None
+        run_id = details.get("run_id") if isinstance(details, dict) else None
+        if not run_id or (row.worker_id, run_id) in seen:
+            continue
+        seen.add((row.worker_id, run_id))
+        conn.execute(text("UPDATE executions SET run_id = :run_id WHERE id = :id"), {"run_id": run_id, "id": row.id})
+    conn.execute(text("CREATE UNIQUE INDEX IF NOT EXISTS uq_executions_worker_run ON executions (worker_id, run_id)"))
+
+
 MIGRATIONS: List[Migration] = [
     Migration(1, "baseline: workers and executions", _baseline),
     Migration(2, "run records: executions.details, step_results, failures", _run_records),
     Migration(3, "status partial for runs that finished with failures", _partial_status),
+    Migration(4, "executions.run_id, unique per worker", _run_id_column),
 ]
 
 

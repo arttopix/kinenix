@@ -140,6 +140,7 @@ One row per run, written when the worker sends the run.
 | `ai_suggestion` | Suggested fix, in Thai | |
 | `created_at` | When the Hub received the run, UTC | `2026-10-11 19:14:01.000000` |
 | `details` | JSON, keys below | `{"v": 1, "run_id": ...}` |
+| `run_id` | Run id on the worker; unique for each worker, so a run sent twice is stored once. Empty for runs from older workers | `20261012T020000-abcd` |
 
 #### `executions.details`
 
