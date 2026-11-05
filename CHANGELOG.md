@@ -24,6 +24,7 @@ Fixes from a review of 1.0.0rc2. Many of them change behavior that stays the sam
 
 ### Fixed
 
+- A null or out-of-range score from the central LLM, or a bad duration in telemetry, returned HTTP 500 and lost the run, and a score of 92 showed as 9200% (#169). The Hub now falls back to rule-based triage and keeps the run. Thanks to @mikemikimike.
 - A run sent to the Hub twice was stored twice (#165). The Hub now keeps one record for each `run_id` of a worker and answers a repeat with that record, which also makes it safe to send a run again. `executions` has a new `run_id` column, filled in at the first start of the new Hub; rows that already share a run id are kept. Upgrading: a `hub.db` from Hub 0.2.0b3 or older that holds runs must be started once with Hub 1.0.0rc2 first ([docs/hub.md](docs/hub.md), section 6.1).
 - `http.request` sent an empty body for a list payload; a list is now sent as JSON (#163).
 - `number('.5')` gave 5; it now gives 0.5 (#164).
